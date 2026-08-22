@@ -27,6 +27,14 @@ const Admin = lazy(
 );
 
 
+const Forum = lazy(
+  () =>
+    import(
+      "./pages/forum/Forum"
+    )
+);
+
+
 /* ==========================================================
    ROFFLE
    APP ENTRY / LOGIN
@@ -712,6 +720,24 @@ function App() {
   ) {
     return <LoginPage />;
   }
+
+  if (
+    path === "/forum" ||
+    path.startsWith(
+      "/forum/"
+    )
+  ) {
+    return (
+      <Suspense
+        fallback={
+          <PrototypeLoading />
+        }
+      >
+        <Forum />
+      </Suspense>
+    );
+  }
+
 
   if (
     path === "/admin" ||

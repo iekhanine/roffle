@@ -9,6 +9,7 @@ import {
   UserRound,
   Menu,
   X,
+  Eye,
   MessageCircle,
   Play,
   ChevronRight,
@@ -88,7 +89,7 @@ type ContentFilter =
 
 
 const POSTS_PER_PAGE =
-  6;
+  10;
 
 
 type Post = {
@@ -2026,21 +2027,13 @@ function App() {
           <nav className="desktop-nav">
             <a
               className="nav-active"
-              href="#home"
+              href="/"
             >
               Home
             </a>
 
-            <a href="#forums">
+            <a href="/forum">
               Forums
-            </a>
-
-            <a href="#latest">
-              Latest
-            </a>
-
-            <a href="#members">
-              Members
             </a>
           </nav>
 
@@ -2136,20 +2129,12 @@ function App() {
 
         {mobileOpen && (
           <nav className="mobile-nav">
-            <a href="#home">
+            <a href="/">
               Home
             </a>
 
-            <a href="#forums">
+            <a href="/forum">
               Forums
-            </a>
-
-            <a href="#latest">
-              Latest
-            </a>
-
-            <a href="#members">
-              Members
             </a>
 
             <button
@@ -2215,7 +2200,7 @@ function App() {
           </strong>
 
 {!session && (
-          <a href="#join">
+          <a href="/login">
             Create an account
             <ChevronRight size={15} />
           </a>
