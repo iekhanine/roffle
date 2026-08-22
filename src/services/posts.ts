@@ -10,6 +10,7 @@ import {
 
 import type {
   CreateQuickPostInput,
+  EditPostInput,
   GifAttachment,
   PostRecord,
 } from "../types/post";
@@ -765,14 +766,31 @@ export async function createQuickPost(
         true,
     };
   } else {
-    const uploaded =
-      await uploadPostImage(
-        user.id,
-        input.image
-      );
+    let primaryImageUrl:
+      string;
 
-    storagePath =
-      uploaded.storagePath;
+    if (input.image) {
+      const uploaded =
+        await uploadPostImage(
+          user.id,
+          input.image
+        );
+
+      storagePath =
+        uploaded.storagePath;
+
+      primaryImageUrl =
+        uploaded.imageUrl;
+    } else if (
+      input.mainGif
+    ) {
+      primaryImageUrl =
+        input.mainGif.url;
+    } else {
+      throw new Error(
+        "Pick an image or choose a GIF from GIPHY."
+      );
+    }
 
     payload = {
       user_id:
@@ -804,7 +822,7 @@ export async function createQuickPost(
         null,
 
       image_url:
-        uploaded.imageUrl,
+        primaryImageUrl,
 
       ...optionalGif,
 
@@ -980,4 +998,277 @@ export async function getFeedPosts() {
   return attachPostEngagement(
     mainFeedRecords
   );
+}
+
+
+
+/* ==========================================================
+   EDIT POST
+   ========================================================== */
+
+
+export async function updatePost(
+  input:
+    EditPostInput,
+): Promise<PostRecord> {
+  const user =
+    await getCurrentUser();
+
+  if (
+    !input.categoryId
+  ) {
+    throw new Error(
+      "Choose a category."
+    );
+  }
+
+  if (
+    input.tagIds.length >
+      5
+  ) {
+    throw new Error(
+      "Choose no more than five tags."
+    );
+  }
+
+
+  let newStoragePath:
+    string | null =
+      null;
+
+  let imageUrl =
+    input.currentImageUrl ??
+    null;
+
+
+  if (
+    input.postType ===
+      "image" &&
+    input.replacementImage
+  ) {
+    const uploaded =
+      await uploadPostImage(
+        user.id,
+        input.replacementImage
+      );
+
+    imageUrl =
+      uploaded.imageUrl;
+
+    newStoragePath =
+      uploaded.storagePath;
+  }
+
+
+  let youtubeUrl:
+    string | null =
+      null;
+
+  let youtubeId:
+    string | null =
+      null;
+
+  let videoType:
+    string | null =
+      null;
+
+
+  if (
+    input.postType ===
+      "youtube"
+  ) {
+    const parsed =
+      parseYouTubeUrl(
+        input.youtubeUrl ??
+        ""
+      );
+
+    if (!parsed) {
+      if (newStoragePath) {
+        await supabase.storage
+          .from(
+            POST_IMAGE_BUCKET
+          )
+          .remove([
+            newStoragePath,
+          ]);
+      }
+
+      throw new Error(
+        "That does not look like a valid YouTube URL."
+      );
+    }
+
+    youtubeUrl =
+      parsed.canonicalUrl;
+
+    youtubeId =
+      parsed.youtubeId;
+
+    videoType =
+      parsed.videoType;
+  }
+
+
+  if (
+    input.postType ===
+      "text"
+  ) {
+    if (
+      !input.title?.trim()
+    ) {
+      throw new Error(
+        "Give the post a title."
+      );
+    }
+
+    if (
+      !input.body?.trim()
+    ) {
+      throw new Error(
+        "Write something first."
+      );
+    }
+  }
+
+
+  if (
+    input.postType ===
+      "image" &&
+    !imageUrl
+  ) {
+    throw new Error(
+      "The image post needs an image."
+    );
+  }
+
+
+  const gifFields =
+    input.gif
+      ? getGifFields(
+          input.gif
+        )
+      : {
+          gif_id:
+            null,
+
+          gif_url:
+            null,
+
+          gif_preview_url:
+            null,
+        };
+
+
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      "edit_post",
+      {
+        target_post:
+          input.postId,
+
+        new_title:
+          cleanOptionalText(
+            input.title
+          ),
+
+        new_body:
+          cleanOptionalText(
+            input.body
+          ),
+
+        new_youtube_url:
+          youtubeUrl,
+
+        new_youtube_id:
+          youtubeId,
+
+        new_video_type:
+          videoType,
+
+        new_image_url:
+          imageUrl,
+
+        new_category_id:
+          input.categoryId,
+
+        new_tag_ids:
+          input.tagIds,
+
+        new_gif_id:
+          gifFields.gif_id,
+
+        new_gif_url:
+          gifFields.gif_url,
+
+        new_gif_preview_url:
+          gifFields
+            .gif_preview_url,
+      }
+    );
+
+
+  if (error) {
+    if (newStoragePath) {
+      await supabase.storage
+        .from(
+          POST_IMAGE_BUCKET
+        )
+        .remove([
+          newStoragePath,
+        ]);
+    }
+
+    throw error;
+  }
+
+
+  const refreshed =
+    await getFeedPosts();
+
+  const updated =
+    refreshed.find(
+      (
+        post
+      ) =>
+        post.id ===
+        input.postId
+    );
+
+
+  if (!updated) {
+    throw new Error(
+      "The post was updated, but ROFFLE could not reload it."
+    );
+  }
+
+
+  return updated;
+}
+
+
+/* ==========================================================
+   DELETE POST
+   ========================================================== */
+
+
+export async function deletePost(
+  postId: string,
+) {
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      "delete_post",
+      {
+        target_post:
+          postId,
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
 }

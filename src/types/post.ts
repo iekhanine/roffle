@@ -112,7 +112,12 @@ export type CreateImagePostInput = {
   postType: "image";
   title?: string;
   body?: string;
-  image: File;
+
+  image?:
+    File | null;
+
+  mainGif?:
+    GifAttachment | null;
 
   categoryId: string;
   tagIds: string[];
@@ -124,3 +129,33 @@ export type CreateQuickPostInput =
   | CreateYouTubePostInput
   | CreateTextPostInput
   | CreateImagePostInput;
+
+
+/* ==========================================================
+   EDIT POST
+   ========================================================== */
+
+
+export type EditPostInput = {
+  postId: string;
+
+  postType:
+    QuickPostType;
+
+  title?: string;
+  body?: string;
+
+  youtubeUrl?: string;
+
+  currentImageUrl?:
+    string | null;
+
+  replacementImage?:
+    File | null;
+
+  categoryId: string;
+  tagIds: string[];
+
+  gif?:
+    GifAttachment | null;
+};

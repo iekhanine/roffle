@@ -681,11 +681,20 @@ export default function QuickPostDialog({
               }
             );
         } else {
-          if (!image) {
+          if (
+            !image &&
+            !selectedGif
+          ) {
             throw new Error(
-              "Pick an image first."
+              "Pick an image or choose a GIF from GIPHY."
             );
           }
+
+          const usingGifAsMain =
+            !image &&
+            Boolean(
+              selectedGif
+            );
 
           created =
             await createQuickPost(
@@ -699,6 +708,11 @@ export default function QuickPostDialog({
 
                 image,
 
+                mainGif:
+                  usingGifAsMain
+                    ? selectedGif
+                    : null,
+
                 categoryId:
                   selectedCategoryId,
 
@@ -706,7 +720,9 @@ export default function QuickPostDialog({
                   selectedTagIds,
 
                 gif:
-                  selectedGif,
+                  usingGifAsMain
+                    ? null
+                    : selectedGif,
               }
             );
         }
@@ -823,7 +839,8 @@ export default function QuickPostDialog({
               .length <=
               500
           : Boolean(
-              image
+              image ||
+              selectedGif
             ) &&
             body.trim()
               .length <=
@@ -1205,6 +1222,10 @@ export default function QuickPostDialog({
                     <span>
                       JPG, PNG, WEBP, or GIF · 10 MB max
                     </span>
+
+                    <small className="quick-post-image-giphy-hint">
+                      Or skip the upload and choose a GIPHY below.
+                    </small>
                   </div>
                 )}
               </label>
@@ -1392,11 +1413,19 @@ export default function QuickPostDialog({
 
                 <div>
                   <strong>
-                    SEARCH GIPHY because you need help
+                    {postType ===
+                      "image" &&
+                    !image
+                      ? "USE GIPHY AS THE MAIN POST"
+                      : "SEARCH GIPHY because you need help"}
                   </strong>
 
                   <span>
-                    I mean, it's optional. You choose to do this.
+                    {postType ===
+                      "image" &&
+                    !image
+                      ? "Pick one and it becomes the actual image post."
+                      : "I mean, it's optional. You choose to do this."}
                   </span>
                 </div>
               </div>
@@ -1440,7 +1469,11 @@ export default function QuickPostDialog({
                   }}
                 >
                   <X size={14} />
-                  Remove GIF
+                  {postType ===
+                    "image" &&
+                  !image
+                    ? "Remove main GIF"
+                    : "Remove GIF"}
                 </button>
               </div>
             )}

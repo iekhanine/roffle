@@ -20,15 +20,18 @@ import {
   Hash,
   Image as ImageIcon,
   Video,
-  Link as LinkIcon,
   Plus,
   Heart,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 import QuickPostDialog from "./components/posts/QuickPostDialog";
+import EditPostDialog from "./components/posts/EditPostDialog";
 import PostComments from "./components/posts/PostComments";
 
 import {
+  deletePost,
   getFeedPosts,
 } from "./services/posts";
 
@@ -86,6 +89,11 @@ type ContentFilter =
 
 type Post = {
   id: number | string;
+  userId: string;
+
+  sourceRecord:
+    PostRecord;
+
   title: string;
   author: string;
   avatar: string;
@@ -166,6 +174,12 @@ function mapPostRecord(
     return {
       id:
         post.id,
+
+      userId:
+        post.user_id,
+
+      sourceRecord:
+        post,
 
       title:
         post.title ??
@@ -254,6 +268,12 @@ function mapPostRecord(
       id:
         post.id,
 
+      userId:
+        post.user_id,
+
+      sourceRecord:
+        post,
+
       title:
         post.title ??
         "Image post",
@@ -323,6 +343,12 @@ function mapPostRecord(
   return {
     id:
       post.id,
+
+    userId:
+      post.user_id,
+
+    sourceRecord:
+      post,
 
     title:
       post.title ??
@@ -551,6 +577,8 @@ function PostCard({
   session,
   onToggleLike,
   onCommentCountChanged,
+  onEdit,
+  onDelete,
   isStaff,
 }: {
   post: Post;
@@ -567,6 +595,14 @@ function PostCard({
     count: number,
   ) => void;
 
+  onEdit: (
+    post: Post,
+  ) => void;
+
+  onDelete: (
+    post: Post,
+  ) => void;
+
   isStaff: boolean;
 }) {
   const [
@@ -574,6 +610,27 @@ function PostCard({
     setCommentsOpen,
   ] =
     useState(false);
+
+  const [
+    menuOpen,
+    setMenuOpen,
+  ] =
+    useState(false);
+
+  const isOwner =
+    session?.user.id ===
+    post.userId;
+
+  const canEdit =
+    Boolean(
+      isOwner
+    );
+
+  const canDelete =
+    Boolean(
+      isOwner ||
+      isStaff
+    );
 
 
   return (
@@ -603,12 +660,76 @@ function PostCard({
             )}
           </div>
 
-          <button
-            className="post-menu"
-            aria-label="Post menu"
-          >
-            •••
-          </button>
+          {(canEdit ||
+            canDelete) && (
+            <div className="post-menu-wrap">
+              <button
+                className="post-menu"
+                type="button"
+                aria-label="Post menu"
+                aria-expanded={
+                  menuOpen
+                }
+                onClick={() => {
+                  setMenuOpen(
+                    (
+                      current
+                    ) =>
+                      !current
+                  );
+                }}
+              >
+                •••
+              </button>
+
+              {menuOpen && (
+                <div className="post-menu-dropdown">
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(
+                          false
+                        );
+
+                        onEdit(
+                          post
+                        );
+                      }}
+                    >
+                      <Pencil
+                        size={13}
+                      />
+
+                      Edit
+                    </button>
+                  )}
+
+                  {canDelete && (
+                    <button
+                      className="danger"
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(
+                          false
+                        );
+
+                        onDelete(
+                          post
+                        );
+                      }}
+                    >
+                      <Trash2
+                        size={13}
+                      />
+
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <a
@@ -805,10 +926,6 @@ function RailModule({
           {icon}
           <h3>{title}</h3>
         </div>
-
-        <button aria-label="Module options">
-          •••
-        </button>
       </header>
 
       <div className="rail-body">
@@ -870,10 +987,24 @@ function App() {
     );
 
   const [
+    categoriesExpanded,
+    setCategoriesExpanded,
+  ] =
+    useState(false);
+
+  const [
     postDialogOpen,
     setPostDialogOpen,
   ] =
     useState(false);
+
+  const [
+    editingPost,
+    setEditingPost,
+  ] =
+    useState<PostRecord | null>(
+      null
+    );
 
   const [
     livePosts,
@@ -1162,6 +1293,104 @@ function App() {
     };
 
 
+  const handlePostEdited =
+    (
+      updated:
+        PostRecord
+    ) => {
+      const mapped =
+        mapPostRecord(
+          updated
+        );
+
+      setLivePosts(
+        (
+          current
+        ) =>
+          current.map(
+            (
+              item
+            ) =>
+              item.id ===
+                mapped.id
+                ? mapped
+                : item
+          )
+      );
+
+      setEditingPost(
+        null
+      );
+
+      refreshYouTubeGems();
+    };
+
+
+  const handleDeletePost =
+    async (
+      post:
+        Post
+    ) => {
+      const confirmed =
+        window.confirm(
+          `Delete "${post.title}"? This cannot be undone.`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        await deletePost(
+          String(
+            post.id
+          )
+        );
+
+        setLivePosts(
+          (
+            current
+          ) =>
+            current.filter(
+              (
+                item
+              ) =>
+                item.id !==
+                post.id
+            )
+        );
+
+        refreshYouTubeGems();
+      } catch (
+        error
+      ) {
+        console.error(
+          "ROFFLE POST DELETE ERROR:",
+          error
+        );
+
+        const message =
+          error &&
+          typeof error ===
+            "object" &&
+          "message" in error
+            ? String(
+                (
+                  error as {
+                    message:
+                      unknown;
+                  }
+                ).message
+              )
+            : "ROFFLE could not delete the post.";
+
+        window.alert(
+          message
+        );
+      }
+    };
+
+
   const handleToggleLike =
     async (
       post: Post,
@@ -1441,6 +1670,153 @@ function App() {
         ? 1
         : 0
     );
+
+
+  const approvedRailPosts =
+    useMemo(
+      () =>
+        livePosts.filter(
+          (
+            post
+          ) =>
+            post.moderationStatus ===
+              "approved"
+        ),
+      [
+        livePosts,
+      ]
+    );
+
+
+  const categoryPostCounts =
+    useMemo(
+      () => {
+        const counts =
+          new Map<
+            string,
+            number
+          >();
+
+        for (
+          const post
+          of approvedRailPosts
+        ) {
+          if (
+            !post.categoryId
+          ) {
+            continue;
+          }
+
+          counts.set(
+            post.categoryId,
+            (
+              counts.get(
+                post.categoryId
+              ) ??
+              0
+            ) + 1
+          );
+        }
+
+        return counts;
+      },
+      [
+        approvedRailPosts,
+      ]
+    );
+
+
+  const tagPostCounts =
+    useMemo(
+      () => {
+        const counts =
+          new Map<
+            string,
+            number
+          >();
+
+        for (
+          const post
+          of approvedRailPosts
+        ) {
+          for (
+            const articleTag
+            of post.articleTags
+          ) {
+            counts.set(
+              articleTag.id,
+              (
+                counts.get(
+                  articleTag.id
+                ) ??
+                0
+              ) + 1
+            );
+          }
+        }
+
+        return counts;
+      },
+      [
+        approvedRailPosts,
+      ]
+    );
+
+
+  const railTags =
+    useMemo(
+      () =>
+        [...filterTags].sort(
+          (
+            left,
+            right
+          ) =>
+            (
+              tagPostCounts.get(
+                right.id
+              ) ??
+              0
+            ) -
+              (
+                tagPostCounts.get(
+                  left.id
+                ) ??
+                0
+              ) ||
+            left.sort_order -
+              right.sort_order ||
+            left.name.localeCompare(
+              right.name
+            )
+        ),
+      [
+        filterTags,
+        tagPostCounts,
+      ]
+    );
+
+
+  const scrollToFeed =
+    () => {
+      window.setTimeout(
+        () => {
+          document
+            .querySelector(
+              ".feed-column"
+            )
+            ?.scrollIntoView(
+              {
+                behavior:
+                  "smooth",
+
+                block:
+                  "start",
+              }
+            );
+        },
+        0
+      );
+    };
 
 
   const clearFilters =
@@ -2143,6 +2519,24 @@ function App() {
                     onCommentCountChanged={
                       handleCommentCountChanged
                     }
+                    onEdit={
+                      (
+                        selected
+                      ) => {
+                        setEditingPost(
+                          selected.sourceRecord
+                        );
+                      }
+                    }
+                    onDelete={
+                      (
+                        selected
+                      ) => {
+                        void handleDeletePost(
+                          selected
+                        );
+                      }
+                    }
                     isStaff={
                       accessRole ===
                         "moderator" ||
@@ -2252,79 +2646,148 @@ function App() {
                 <Hash size={17} />
               }
             >
-              <div className="category-list">
-                <a href="#goods">
-                  <div>
-                    <span className="category-icon">
-                      <Flame
-                        size={16}
-                      />
-                    </span>
+              {filterCategories.length ===
+                0 ? (
+                <div className="rail-taxonomy-empty">
+                  No categories yet.
+                </div>
+              ) : (
+                <div className="category-list">
+                  <button
+                    className={
+                      categoryFilter ===
+                        "all"
+                        ? "selected"
+                        : ""
+                    }
+                    type="button"
+                    onClick={() => {
+                      setCategoryFilter(
+                        "all"
+                      );
 
-                    <span>
-                      The Goods
-                    </span>
-                  </div>
+                      scrollToFeed();
+                    }}
+                  >
+                    <div>
+                      <span className="category-icon">
+                        <Hash
+                          size={15}
+                        />
+                      </span>
 
-                  <strong>
-                    384
-                  </strong>
-                </a>
+                      <span>
+                        All categories
+                      </span>
+                    </div>
 
-                <a href="#videos">
-                  <div>
-                    <span className="category-icon">
-                      <Video
-                        size={16}
-                      />
-                    </span>
+                    <strong>
+                      {approvedRailPosts.length}
+                    </strong>
+                  </button>
 
-                    <span>
-                      Videos
-                    </span>
-                  </div>
+                  {(categoriesExpanded
+                    ? filterCategories
+                    : filterCategories.slice(
+                        0,
+                        5
+                      )
+                  ).map(
+                    (
+                      category
+                    ) => {
+                      const count =
+                        categoryPostCounts.get(
+                          category.id
+                        ) ??
+                        0;
 
-                  <strong>
-                    209
-                  </strong>
-                </a>
+                      return (
+                        <button
+                          key={
+                            category.id
+                          }
+                          className={
+                            categoryFilter ===
+                              category.id
+                              ? "selected"
+                              : ""
+                          }
+                          type="button"
+                          onClick={() => {
+                            setCategoryFilter(
+                              (
+                                current
+                              ) =>
+                                current ===
+                                  category.id
+                                  ? "all"
+                                  : category.id
+                            );
 
-                <a href="#photos">
-                  <div>
-                    <span className="category-icon">
-                      <ImageIcon
-                        size={16}
-                      />
-                    </span>
+                            scrollToFeed();
+                          }}
+                        >
+                          <div>
+                            <span className="category-icon">
+                              {category.slug ===
+                                "videos" ? (
+                                <Video
+                                  size={15}
+                                />
+                              ) : category.slug ===
+                                  "images" ? (
+                                <ImageIcon
+                                  size={15}
+                                />
+                              ) : category.slug ===
+                                  "funny" ||
+                                category.slug ===
+                                  "wtf" ? (
+                                <Flame
+                                  size={15}
+                                />
+                              ) : (
+                                <Hash
+                                  size={15}
+                                />
+                              )}
+                            </span>
 
-                    <span>
-                      Photos
-                    </span>
-                  </div>
+                            <span>
+                              {category.name}
+                            </span>
+                          </div>
 
-                  <strong>
-                    91
-                  </strong>
-                </a>
+                          <strong>
+                            {count}
+                          </strong>
+                        </button>
+                      );
+                    }
+                  )}
 
-                <a href="#links">
-                  <div>
-                    <span className="category-icon">
-                      <LinkIcon
-                        size={16}
-                      />
-                    </span>
-
-                    <span>
-                      Links
-                    </span>
-                  </div>
-
-                  <strong>
-                    84
-                  </strong>
-                </a>
-              </div>
+                  {filterCategories.length >
+                    5 && (
+                    <button
+                      className="category-more-toggle"
+                      type="button"
+                      onClick={() => {
+                        setCategoriesExpanded(
+                          (
+                            current
+                          ) =>
+                            !current
+                        );
+                      }}
+                    >
+                      {categoriesExpanded
+                        ? "LESS ‹"
+                        : `MORE ›`}
+                    </button>
+                  )}
+                </div>
+              )}
             </RailModule>
 
             <RailModule
@@ -2333,35 +2796,90 @@ function App() {
                 <Hash size={17} />
               }
             >
-              <div className="tag-list">
-                <a href="#cats">
-                  cats
-                </a>
+              {railTags.length ===
+                0 ? (
+                <div className="rail-taxonomy-empty">
+                  No article tags yet.
+                </div>
+              ) : (
+                <>
+                  <div className="tag-list">
+                    {railTags.map(
+                      (
+                        articleTag
+                      ) => {
+                        const count =
+                          tagPostCounts.get(
+                            articleTag.id
+                          ) ??
+                          0;
 
-                <a href="#dads">
-                  dads
-                </a>
+                        return (
+                          <button
+                            key={
+                              articleTag.id
+                            }
+                            className={
+                              tagFilter ===
+                                articleTag.id
+                                ? "selected"
+                                : ""
+                            }
+                            type="button"
+                            title={`${count} ${
+                              count === 1
+                                ? "post"
+                                : "posts"
+                            }`}
+                            onClick={() => {
+                              setTagFilter(
+                                (
+                                  current
+                                ) =>
+                                  current ===
+                                    articleTag.id
+                                    ? "all"
+                                    : articleTag.id
+                              );
 
-                <a href="#wtf">
-                  wtf
-                </a>
+                              scrollToFeed();
+                            }}
+                          >
+                            <span>
+                              #
+                              {articleTag.name}
+                            </span>
 
-                <a href="#video">
-                  video
-                </a>
+                            {count >
+                              0 && (
+                              <strong>
+                                {count}
+                              </strong>
+                            )}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
 
-                <a href="#internet">
-                  internet
-                </a>
+                  {tagFilter !==
+                    "all" && (
+                    <button
+                      className="rail-clear-tag"
+                      type="button"
+                      onClick={() => {
+                        setTagFilter(
+                          "all"
+                        );
 
-                <a href="#fail">
-                  fail
-                </a>
-
-                <a href="#funny">
-                  funny
-                </a>
-              </div>
+                        scrollToFeed();
+                      }}
+                    >
+                      Clear tag
+                    </button>
+                  )}
+                </>
+              )}
             </RailModule>
 
             {!session && (
@@ -2397,6 +2915,25 @@ function App() {
         }}
         onPosted={
           handlePostCreated
+        }
+      />
+
+      <EditPostDialog
+        open={
+          Boolean(
+            editingPost
+          )
+        }
+        post={
+          editingPost
+        }
+        onClose={() => {
+          setEditingPost(
+            null
+          );
+        }}
+        onSaved={
+          handlePostEdited
         }
       />
 
