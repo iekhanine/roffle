@@ -21,19 +21,31 @@ import {
   Image as ImageIcon,
   Video,
   Link as LinkIcon,
+  Plus,
 } from "lucide-react";
+
+import QuickPostDialog from "./components/posts/QuickPostDialog";
+
+import {
+  getPublishedPosts,
+} from "./services/posts";
+
+import type {
+  PostRecord,
+} from "./types/post";
 
 import "./AppV2.css";
 
 type PostType =
   | "short"
+  | "video"
   | "image"
   | "gallery"
   | "link"
   | "text";
 
 type Post = {
-  id: number;
+  id: number | string;
   title: string;
   author: string;
   avatar: string;
@@ -48,7 +60,7 @@ type Post = {
   tag?: string;
 };
 
-const posts: Post[] = [
+const demoPosts: Post[] = [
   {
     id: 80,
     title: "Crabs",
@@ -146,34 +158,6 @@ const posts: Post[] = [
   },
 ];
 
-const featured = [
-  {
-    title: "Who updated Michael Jackson's Pronouns?",
-    type: "Trending",
-    image:
-      "https://picsum.photos/seed/roffle-feature-1/600/380",
-  },
-  {
-    title: "Suburban moms in 2026",
-    type: "Internet",
-    image:
-      "https://picsum.photos/seed/roffle-feature-2/600/380",
-  },
-  {
-    title:
-      "I achieved flow-state by pinching and rolling my balls",
-    type: "Discussion",
-    image:
-      "https://picsum.photos/seed/roffle-feature-3/600/380",
-  },
-  {
-    title: "Cats",
-    type: "Photos",
-    image:
-      "https://picsum.photos/seed/roffle-feature-4/600/380",
-  },
-];
-
 const youtubeGems = [
   {
     title: "This week's questionable decisions",
@@ -191,6 +175,171 @@ const youtubeGems = [
       "https://picsum.photos/seed/gem-3/600/340",
   },
 ];
+
+function formatPostDate(
+  value: string,
+) {
+  const date =
+    new Date(value);
+
+  return date.toLocaleString(
+    undefined,
+    {
+      dateStyle:
+        "medium",
+
+      timeStyle:
+        "short",
+    }
+  );
+}
+
+
+function getTextPostBackground(
+  postId: string,
+) {
+  return `https://picsum.photos/seed/roffle-${postId}/1200/800`;
+}
+
+
+function mapPostRecord(
+  post: PostRecord,
+): Post {
+  const author =
+    post.profiles
+      ?.display_name ??
+    "ROFFLE User";
+
+  const avatar =
+    author
+      .trim()
+      .charAt(0)
+      .toUpperCase() ||
+    "R";
+
+  if (
+    post.post_type ===
+    "youtube"
+  ) {
+    return {
+      id:
+        post.id,
+
+      title:
+        post.title ??
+        (
+          post.video_type ===
+          "short"
+            ? "YouTube Short"
+            : "YouTube video"
+        ),
+
+      author,
+      avatar,
+
+      published:
+        formatPostDate(
+          post.created_at
+        ),
+
+      views: 0,
+      comments: 0,
+
+      type:
+        post.video_type ===
+        "short"
+          ? "short"
+          : "video",
+
+      tag:
+        "VIDEO",
+
+      youtubeId:
+        post.youtube_id ??
+        undefined,
+
+      image:
+        post.youtube_id
+          ? `https://i.ytimg.com/vi/${post.youtube_id}/hqdefault.jpg`
+          : undefined,
+    };
+  }
+
+  if (
+    post.post_type ===
+    "image"
+  ) {
+    return {
+      id:
+        post.id,
+
+      title:
+        post.title ??
+        "Image post",
+
+      author,
+      avatar,
+
+      published:
+        formatPostDate(
+          post.created_at
+        ),
+
+      views: 0,
+      comments: 0,
+
+      type:
+        "image",
+
+      tag:
+        "IMAGE",
+
+      description:
+        post.body ??
+        undefined,
+
+      image:
+        post.image_url ??
+        undefined,
+    };
+  }
+
+  return {
+    id:
+      post.id,
+
+    title:
+      post.title ??
+      "Untitled nonsense",
+
+    author,
+    avatar,
+
+    published:
+      formatPostDate(
+        post.created_at
+      ),
+
+    views: 0,
+    comments: 0,
+
+    type:
+      "text",
+
+    tag:
+      "TEXT",
+
+    description:
+      post.body ??
+      undefined,
+
+    image:
+      getTextPostBackground(
+        post.id
+      ),
+  };
+}
+
 
 function RoffleLogo() {
   return (
@@ -263,6 +412,29 @@ function MediaStage({
   }
 
   if (
+    post.type ===
+    "video"
+  ) {
+    return (
+      <div className="video-stage">
+        {post.youtubeId ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${post.youtubeId}?rel=0&modestbranding=1`}
+            title={post.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        ) : (
+          <div className="video-stage-empty">
+            Video unavailable
+          </div>
+        )}
+      </div>
+    );
+  }
+
+
+  if (
     post.type === "image" ||
     post.type === "gallery"
   ) {
@@ -329,7 +501,10 @@ function PostCard({
   post: Post;
 }) {
   return (
-    <article className="post-card">
+    <article
+      className="post-card"
+      id={`post-${post.id}`}
+    >
       <header className="post-header">
         <div className="post-header-top">
           <span className="content-badge">
@@ -461,6 +636,18 @@ function App() {
     useState(false);
 
   const [
+    postDialogOpen,
+    setPostDialogOpen,
+  ] =
+    useState(false);
+
+  const [
+    livePosts,
+    setLivePosts,
+  ] =
+    useState<Post[]>([]);
+
+  const [
     session,
     setSession,
   ] = useState<Session | null>(
@@ -516,6 +703,86 @@ function App() {
   }, []);
 
 
+  useEffect(() => {
+    let mounted = true;
+
+    void getPublishedPosts()
+      .then(
+        (
+          records
+        ) => {
+          if (!mounted) {
+            return;
+          }
+
+          setLivePosts(
+            records.map(
+              mapPostRecord
+            )
+          );
+        }
+      )
+      .catch(
+        (
+          error
+        ) => {
+          console.error(
+            "ROFFLE FEED ERROR:",
+            error
+          );
+        }
+      );
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+
+  const openQuickPost =
+    () => {
+      if (!session) {
+        window.location.assign(
+          "/login"
+        );
+
+        return;
+      }
+
+      setPostDialogOpen(
+        true
+      );
+    };
+
+
+  const handlePostCreated =
+    (
+      post:
+        PostRecord
+    ) => {
+      const mapped =
+        mapPostRecord(
+          post
+        );
+
+      setLivePosts(
+        (
+          current
+        ) => [
+          mapped,
+
+          ...current.filter(
+            (
+              item
+            ) =>
+              item.id !==
+              mapped.id
+          ),
+        ]
+      );
+    };
+
+
   const signOut =
     async () => {
       await supabase.auth.signOut();
@@ -548,6 +815,16 @@ function App() {
     session?.user.user_metadata
       ?.full_name ??
     "Signed in";
+
+
+  const happeningPosts =
+    [
+      ...livePosts,
+      ...demoPosts,
+    ].slice(
+      0,
+      4
+    );
 
 
   return (
@@ -587,6 +864,17 @@ function App() {
               aria-label="Search"
             >
               <Search size={19} />
+            </button>
+
+            <button
+              className="quick-post-trigger"
+              type="button"
+              onClick={
+                openQuickPost
+              }
+            >
+              <Plus size={16} />
+              Post
             </button>
 
             {authReady &&
@@ -666,6 +954,21 @@ function App() {
               Members
             </a>
 
+            <button
+              className="mobile-post-trigger"
+              type="button"
+              onClick={() => {
+                setMobileOpen(
+                  false
+                );
+
+                openQuickPost();
+              }}
+            >
+              <Plus size={15} />
+              Post
+            </button>
+
             {authReady &&
               (session ? (
                 <div className="mobile-auth">
@@ -737,23 +1040,47 @@ function App() {
           </div>
 
           <div className="trend-grid">
-            {featured.map(
-              (item, index) => (
+            {happeningPosts.map(
+              (
+                item,
+                index
+              ) => (
                 <a
-                  className={`trend-card trend-${index}`}
-                  href="#featured"
-                  key={item.title}
+                  className={`trend-card trend-${index} ${
+                    item.type === "text"
+                      ? "trend-text-card"
+                      : ""
+                  }`}
+                  href={`#post-${item.id}`}
+                  key={item.id}
                 >
-                  <img
-                    src={item.image}
-                    alt=""
-                  />
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt=""
+                    />
+                  ) : item.type === "text" ? (
+                    <div className="trend-text-preview">
+                      <span>
+                        ROFFLE
+                      </span>
+
+                      <p>
+                        {item.title}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="trend-media-placeholder">
+                      <Video size={28} />
+                    </div>
+                  )}
 
                   <div className="trend-overlay" />
 
                   <div className="trend-copy">
                     <span>
-                      {item.type}
+                      {item.tag ??
+                        item.type}
                     </span>
 
                     <strong>
@@ -873,7 +1200,10 @@ function App() {
               </span>
             </div>
 
-            {posts.map((post) => (
+            {[
+              ...livePosts,
+              ...demoPosts,
+            ].map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -1092,6 +1422,18 @@ function App() {
           </aside>
         </div>
       </main>
+
+      <QuickPostDialog
+        open={postDialogOpen}
+        onClose={() => {
+          setPostDialogOpen(
+            false
+          );
+        }}
+        onPosted={
+          handlePostCreated
+        }
+      />
 
       {/* ==================================================
           FOOTER
