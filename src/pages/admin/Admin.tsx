@@ -4,14 +4,19 @@ import {
 } from "react";
 
 import {
+  ArchiveX,
   ArrowLeft,
   FileClock,
   ShieldCheck,
+  Tag,
   Users,
 } from "lucide-react";
 
 import AdminUsers from "../../components/admin/AdminUsers";
+import FlaggedComments from "../../components/admin/FlaggedComments";
 import ModerationQueue from "../../components/admin/ModerationQueue";
+import RejectedPosts from "../../components/admin/RejectedPosts";
+import TaxonomyManager from "../../components/admin/TaxonomyManager";
 
 import {
   getAdminStats,
@@ -35,6 +40,8 @@ import "./Admin.css";
 type Tab =
   | "dashboard"
   | "moderation"
+  | "rejected"
+  | "taxonomy"
   | "users";
 
 
@@ -286,6 +293,54 @@ export default function Admin() {
             )}
           </button>
 
+          <button
+            className={
+              tab ===
+                "rejected"
+                ? "active"
+                : ""
+            }
+            onClick={() => {
+              setTab(
+                "rejected"
+              );
+            }}
+          >
+            <ArchiveX
+              size={16}
+            />
+
+            Rejected
+
+            {stats &&
+              stats.rejected_posts >
+                0 && (
+              <span className="admin-nav-count rejected">
+                {stats.rejected_posts}
+              </span>
+            )}
+          </button>
+
+          <button
+            className={
+              tab ===
+                "taxonomy"
+                ? "active"
+                : ""
+            }
+            onClick={() => {
+              setTab(
+                "taxonomy"
+              );
+            }}
+          >
+            <Tag
+              size={16}
+            />
+
+            Categories & Tags
+          </button>
+
           {access.role ===
             "admin" && (
             <button
@@ -389,6 +444,12 @@ export default function Admin() {
                   }}
                 />
               </div>
+
+              <div className="admin-dashboard-queue">
+                <FlaggedComments
+                  limit={8}
+                />
+              </div>
             </>
           )}
 
@@ -399,6 +460,16 @@ export default function Admin() {
                 void refreshStats();
               }}
             />
+          )}
+
+          {tab ===
+            "rejected" && (
+            <RejectedPosts />
+          )}
+
+          {tab ===
+            "taxonomy" && (
+            <TaxonomyManager />
           )}
 
           {tab ===

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   type Session,
 } from "@supabase/supabase-js";
@@ -22,17 +22,29 @@ import {
   Video,
   Link as LinkIcon,
   Plus,
+  Heart,
 } from "lucide-react";
 
 import QuickPostDialog from "./components/posts/QuickPostDialog";
+import PostComments from "./components/posts/PostComments";
 
 import {
   getFeedPosts,
 } from "./services/posts";
 
 import {
+  getYouTubeGems,
+  togglePostLike,
+  type YouTubeGem,
+} from "./services/engagement";
+
+import {
   getMyAccess,
 } from "./services/admin";
+
+import {
+  getActiveTaxonomy,
+} from "./services/taxonomy";
 
 import type {
   UserRole,
@@ -41,6 +53,12 @@ import type {
 import type {
   PostRecord,
 } from "./types/post";
+
+import type {
+  PostCategory,
+  PostTag,
+  PostTagReference,
+} from "./types/taxonomy";
 
 import "./AppV2.css";
 
@@ -52,45 +70,53 @@ type PostType =
   | "link"
   | "text";
 
+
+type TimeFilter =
+  | "all"
+  | "today"
+  | "week"
+  | "month";
+
+
+type ContentFilter =
+  | "all"
+  | "videos"
+  | "photos"
+  | "discussions";
+
 type Post = {
   id: number | string;
   title: string;
   author: string;
   avatar: string;
   published: string;
+  createdAt: string;
   views: number;
+  likes: number;
   comments: number;
+  likedByMe: boolean;
   type: PostType;
   description?: string;
   image?: string;
   youtubeId?: string;
+  gifUrl?: string;
   source?: string;
   tag?: string;
+
+  categoryId?:
+    string;
+
+  categorySlug?:
+    string;
+
+  articleTags:
+    PostTagReference[];
 
   moderationStatus?:
     | "pending"
     | "approved"
     | "rejected";
 };
-
-
-const youtubeGems = [
-  {
-    title: "This week's questionable decisions",
-    image:
-      "https://picsum.photos/seed/gem-1/600/340",
-  },
-  {
-    title: "Humanity remains undefeated",
-    image:
-      "https://picsum.photos/seed/gem-2/600/340",
-  },
-  {
-    title: "Probably seemed smart at the time",
-    image:
-      "https://picsum.photos/seed/gem-3/600/340",
-  },
-];
 
 function formatPostDate(
   value: string,
@@ -158,8 +184,22 @@ function mapPostRecord(
           post.created_at
         ),
 
+      createdAt:
+        post.created_at,
+
       views: 0,
-      comments: 0,
+
+      likes:
+        post.like_count ??
+        0,
+
+      comments:
+        post.comment_count ??
+        0,
+
+      likedByMe:
+        post.liked_by_me ??
+        false,
 
       type:
         post.video_type ===
@@ -168,10 +208,32 @@ function mapPostRecord(
           : "video",
 
       tag:
+        post.category
+          ?.name ??
         "VIDEO",
+
+      categoryId:
+        post.category
+          ?.id,
+
+      categorySlug:
+        post.category
+          ?.slug,
+
+      articleTags:
+        post.tags ??
+        [],
 
       moderationStatus:
         post.moderation_status,
+
+      description:
+        post.body ??
+        undefined,
+
+      gifUrl:
+        post.gif_url ??
+        undefined,
 
       youtubeId:
         post.youtube_id ??
@@ -204,20 +266,52 @@ function mapPostRecord(
           post.created_at
         ),
 
+      createdAt:
+        post.created_at,
+
       views: 0,
-      comments: 0,
+
+      likes:
+        post.like_count ??
+        0,
+
+      comments:
+        post.comment_count ??
+        0,
+
+      likedByMe:
+        post.liked_by_me ??
+        false,
 
       type:
         "image",
 
       tag:
+        post.category
+          ?.name ??
         "IMAGE",
+
+      categoryId:
+        post.category
+          ?.id,
+
+      categorySlug:
+        post.category
+          ?.slug,
+
+      articleTags:
+        post.tags ??
+        [],
 
       moderationStatus:
         post.moderation_status,
 
       description:
         post.body ??
+        undefined,
+
+      gifUrl:
+        post.gif_url ??
         undefined,
 
       image:
@@ -242,20 +336,52 @@ function mapPostRecord(
         post.created_at
       ),
 
+    createdAt:
+      post.created_at,
+
     views: 0,
-    comments: 0,
+
+    likes:
+      post.like_count ??
+      0,
+
+    comments:
+      post.comment_count ??
+      0,
+
+    likedByMe:
+      post.liked_by_me ??
+      false,
 
     type:
       "text",
 
     tag:
+      post.category
+        ?.name ??
       "TEXT",
+
+    categoryId:
+      post.category
+        ?.id,
+
+    categorySlug:
+      post.category
+        ?.slug,
+
+    articleTags:
+      post.tags ??
+      [],
 
     moderationStatus:
       post.moderation_status,
 
     description:
       post.body ??
+      undefined,
+
+    gifUrl:
+      post.gif_url ??
       undefined,
 
     image:
@@ -422,9 +548,34 @@ function MediaStage({
 
 function PostCard({
   post,
+  session,
+  onToggleLike,
+  onCommentCountChanged,
+  isStaff,
 }: {
   post: Post;
+
+  session:
+    Session | null;
+
+  onToggleLike: (
+    post: Post,
+  ) => void;
+
+  onCommentCountChanged: (
+    postId: string,
+    count: number,
+  ) => void;
+
+  isStaff: boolean;
 }) {
+  const [
+    commentsOpen,
+    setCommentsOpen,
+  ] =
+    useState(false);
+
+
   return (
     <article
       className="post-card"
@@ -467,6 +618,26 @@ function PostCard({
           {post.title}
         </a>
 
+        {post.articleTags.length >
+          0 && (
+          <div className="post-article-tags">
+            {post.articleTags.map(
+              (
+                articleTag
+              ) => (
+                <span
+                  key={
+                    articleTag.id
+                  }
+                >
+                  #
+                  {articleTag.name}
+                </span>
+              )
+            )}
+          </div>
+        )}
+
         <div className="post-meta-row">
           <div className="avatar">
             {post.avatar}
@@ -488,8 +659,8 @@ function PostCard({
 
           <div className="post-metrics">
             <span>
-              <Eye size={15} />
-              {post.views}
+              <Heart size={15} />
+              {post.likes}
             </span>
 
             <span>
@@ -511,22 +682,71 @@ function PostCard({
           </div>
         )}
 
+      {post.gifUrl && (
+        <div className="post-gif-attachment">
+          <img
+            src={
+              post.gifUrl
+            }
+            alt="Attached reaction GIF"
+            loading="lazy"
+          />
+
+          <span>
+            GIF
+          </span>
+        </div>
+      )}
+
       <footer className="post-footer">
-        <button className="reaction">
+        <button
+          className={
+            post.likedByMe
+              ? "reaction liked"
+              : "reaction"
+          }
+          type="button"
+          onClick={() => {
+            onToggleLike(
+              post
+            );
+          }}
+        >
           😂
-          <span>Roffle</span>
+          <span>
+            Roffle
+          </span>
+
+          {post.likes >
+            0 && (
+            <strong>
+              {post.likes}
+            </strong>
+          )}
         </button>
 
-        <a
-          className="comment-link"
-          href={`#post-${post.id}`}
+        <button
+          className={
+            commentsOpen
+              ? "comment-link active"
+              : "comment-link"
+          }
+          type="button"
+          onClick={() => {
+            setCommentsOpen(
+              (
+                current
+              ) =>
+                !current
+            );
+          }}
         >
           <MessageCircle size={16} />
 
           {post.comments === 1
             ? "1 comment"
             : `${post.comments} comments`}
-        </a>
+        </button>
 
         <a
           className="open-post"
@@ -536,9 +756,38 @@ function PostCard({
           <ChevronRight size={17} />
         </a>
       </footer>
+
+      {commentsOpen && (
+        <PostComments
+          postId={
+            String(
+              post.id
+            )
+          }
+          session={
+            session
+          }
+          onCountChanged={
+            (
+              count
+            ) => {
+              onCommentCountChanged(
+                String(
+                  post.id
+                ),
+                count
+              );
+            }
+          }
+          isStaff={
+            isStaff
+          }
+        />
+      )}
     </article>
   );
 }
+
 
 function RailModule({
   title,
@@ -577,6 +826,50 @@ function App() {
     useState(false);
 
   const [
+    timeFilter,
+    setTimeFilter,
+  ] =
+    useState<TimeFilter>(
+      "all"
+    );
+
+  const [
+    contentFilter,
+    setContentFilter,
+  ] =
+    useState<ContentFilter>(
+      "all"
+    );
+
+  const [
+    categoryFilter,
+    setCategoryFilter,
+  ] =
+    useState("all");
+
+  const [
+    tagFilter,
+    setTagFilter,
+  ] =
+    useState("all");
+
+  const [
+    filterCategories,
+    setFilterCategories,
+  ] =
+    useState<PostCategory[]>(
+      []
+    );
+
+  const [
+    filterTags,
+    setFilterTags,
+  ] =
+    useState<PostTag[]>(
+      []
+    );
+
+  const [
     postDialogOpen,
     setPostDialogOpen,
   ] =
@@ -587,6 +880,14 @@ function App() {
     setLivePosts,
   ] =
     useState<Post[]>([]);
+
+  const [
+    youtubeGems,
+    setYoutubeGems,
+  ] =
+    useState<YouTubeGem[]>(
+      []
+    );
 
   const [
     session,
@@ -697,6 +998,48 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
+    void getActiveTaxonomy()
+      .then(
+        (
+          taxonomy
+        ) => {
+          if (!mounted) {
+            return;
+          }
+
+          setFilterCategories(
+            taxonomy.categories
+          );
+
+          setFilterTags(
+            taxonomy.tags
+          );
+        }
+      )
+      .catch(
+        (
+          error
+        ) => {
+          console.warn(
+            "ROFFLE FILTER TAXONOMY ERROR:",
+            error
+          );
+        }
+      );
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+
+  useEffect(() => {
+    if (!authReady) {
+      return;
+    }
+
+    let mounted = true;
+
     void getFeedPosts()
       .then(
         (
@@ -705,6 +1048,11 @@ function App() {
           if (!mounted) {
             return;
           }
+
+          console.log(
+            "ROFFLE POSTS LOADED:",
+            records.length
+          );
 
           setLivePosts(
             records.map(
@@ -721,13 +1069,53 @@ function App() {
             "ROFFLE FEED ERROR:",
             error
           );
+
+          if (mounted) {
+            setLivePosts([]);
+          }
         }
       );
 
     return () => {
       mounted = false;
     };
+  }, [
+    authReady,
+    session?.user.id,
+  ]);
+
+
+  useEffect(() => {
+    let mounted = true;
+
+    void getYouTubeGems(
+      3
+    ).then(
+      (
+        gems
+      ) => {
+        if (mounted) {
+          setYoutubeGems(
+            gems
+          );
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+
+  const refreshYouTubeGems =
+    () => {
+      void getYouTubeGems(
+        3
+      ).then(
+        setYoutubeGems
+      );
+    };
 
 
   const openQuickPost =
@@ -774,6 +1162,99 @@ function App() {
     };
 
 
+  const handleToggleLike =
+    async (
+      post: Post,
+    ) => {
+      if (!session) {
+        window.location.assign(
+          "/login"
+        );
+
+        return;
+      }
+
+      try {
+        const liked =
+          await togglePostLike(
+            String(
+              post.id
+            ),
+            post.likedByMe
+          );
+
+        setLivePosts(
+          (
+            current
+          ) =>
+            current.map(
+              (
+                item
+              ) =>
+                item.id ===
+                  post.id
+                  ? {
+                      ...item,
+
+                      likedByMe:
+                        liked,
+
+                      likes:
+                        Math.max(
+                          0,
+                          item.likes +
+                            (
+                              liked
+                                ? 1
+                                : -1
+                            )
+                        ),
+                    }
+                  : item
+            )
+        );
+
+        refreshYouTubeGems();
+      } catch (
+        error
+      ) {
+        console.error(
+          "ROFFLE LIKE ERROR:",
+          error
+        );
+      }
+    };
+
+
+  const handleCommentCountChanged =
+    (
+      postId: string,
+      count: number,
+    ) => {
+      setLivePosts(
+        (
+          current
+        ) =>
+          current.map(
+            (
+              post
+            ) =>
+              String(
+                post.id
+              ) === postId
+                ? {
+                    ...post,
+                    comments:
+                      count,
+                  }
+                : post
+          )
+      );
+
+      refreshYouTubeGems();
+    };
+
+
   const signOut =
     async () => {
       await supabase.auth.signOut();
@@ -808,19 +1289,193 @@ function App() {
     "Signed in";
 
 
-const happeningPosts =
-  livePosts
-    .filter(
-      (
-        post
-      ) =>
-        post.moderationStatus ===
-          "approved"
-    )
-    .slice(
-      0,
-      4
+  const filteredPosts =
+    useMemo(
+      () => {
+        const now =
+          Date.now();
+
+        return livePosts.filter(
+          (
+            post
+          ) => {
+            const created =
+              new Date(
+                post.createdAt
+              ).getTime();
+
+            let matchesTime =
+              true;
+
+            if (
+              timeFilter ===
+              "today"
+            ) {
+              const startOfToday =
+                new Date();
+
+              startOfToday.setHours(
+                0,
+                0,
+                0,
+                0
+              );
+
+              matchesTime =
+                created >=
+                startOfToday.getTime();
+            } else if (
+              timeFilter ===
+              "week"
+            ) {
+              matchesTime =
+                created >=
+                now -
+                  7 *
+                    24 *
+                    60 *
+                    60 *
+                    1000;
+            } else if (
+              timeFilter ===
+              "month"
+            ) {
+              matchesTime =
+                created >=
+                now -
+                  30 *
+                    24 *
+                    60 *
+                    60 *
+                    1000;
+            }
+
+            let matchesContent =
+              true;
+
+            if (
+              contentFilter ===
+              "videos"
+            ) {
+              matchesContent =
+                post.type ===
+                  "video" ||
+                post.type ===
+                  "short";
+            } else if (
+              contentFilter ===
+              "photos"
+            ) {
+              matchesContent =
+                post.type ===
+                  "image" ||
+                post.type ===
+                  "gallery";
+            } else if (
+              contentFilter ===
+              "discussions"
+            ) {
+              matchesContent =
+                post.type ===
+                  "text";
+            }
+
+            const matchesCategory =
+              categoryFilter ===
+                "all" ||
+              post.categoryId ===
+                categoryFilter;
+
+            const matchesTag =
+              tagFilter ===
+                "all" ||
+              post.articleTags.some(
+                (
+                  articleTag
+                ) =>
+                  articleTag.id ===
+                  tagFilter
+              );
+
+            return (
+              matchesTime &&
+              matchesContent &&
+              matchesCategory &&
+              matchesTag
+            );
+          }
+        );
+      },
+      [
+        livePosts,
+        timeFilter,
+        contentFilter,
+        categoryFilter,
+        tagFilter,
+      ]
     );
+
+
+  const activeFilterCount =
+    (
+      timeFilter !==
+      "all"
+        ? 1
+        : 0
+    ) +
+    (
+      contentFilter !==
+      "all"
+        ? 1
+        : 0
+    ) +
+    (
+      categoryFilter !==
+      "all"
+        ? 1
+        : 0
+    ) +
+    (
+      tagFilter !==
+      "all"
+        ? 1
+        : 0
+    );
+
+
+  const clearFilters =
+    () => {
+      setTimeFilter(
+        "all"
+      );
+
+      setContentFilter(
+        "all"
+      );
+
+      setCategoryFilter(
+        "all"
+      );
+
+      setTagFilter(
+        "all"
+      );
+    };
+
+
+  const happeningPosts =
+    livePosts
+      .filter(
+        (
+          post
+        ) =>
+          post.moderationStatus ===
+            "approved"
+      )
+      .slice(
+        0,
+        4
+      );
 
 
   return (
@@ -1024,10 +1679,12 @@ const happeningPosts =
             Come lurk. Posting is optional.
           </strong>
 
+{!session && (
           <a href="#join">
             Create an account
             <ChevronRight size={15} />
           </a>
+)}
         </div>
       </div>
 
@@ -1131,57 +1788,289 @@ const happeningPosts =
             />
 
             Filter
+
+            {activeFilterCount >
+              0 && (
+              <span className="filter-count">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         </div>
 
         {filterOpen && (
           <div className="filter-panel">
-            <div>
+            <div className="filter-panel-top">
+              <div>
+                <strong>
+                  Filter posts
+                </strong>
+
+                <span>
+                  {filteredPosts.length} of{" "}
+                  {livePosts.length} shown
+                </span>
+              </div>
+
+              {activeFilterCount >
+                0 && (
+                <button
+                  className="filter-clear"
+                  type="button"
+                  onClick={
+                    clearFilters
+                  }
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="filter-row">
               <span>
                 Time
               </span>
 
-              <button className="selected">
+              <button
+                className={
+                  timeFilter ===
+                    "all"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setTimeFilter(
+                    "all"
+                  );
+                }}
+              >
                 All time
               </button>
 
-              <button>
+              <button
+                className={
+                  timeFilter ===
+                    "today"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setTimeFilter(
+                    "today"
+                  );
+                }}
+              >
                 Today
               </button>
 
-              <button>
+              <button
+                className={
+                  timeFilter ===
+                    "week"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setTimeFilter(
+                    "week"
+                  );
+                }}
+              >
                 Last week
               </button>
 
-              <button>
+              <button
+                className={
+                  timeFilter ===
+                    "month"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setTimeFilter(
+                    "month"
+                  );
+                }}
+              >
                 Last month
               </button>
             </div>
 
-            <div>
+            <div className="filter-row">
               <span>
                 Content
               </span>
 
-              <button className="selected">
+              <button
+                className={
+                  contentFilter ===
+                    "all"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setContentFilter(
+                    "all"
+                  );
+                }}
+              >
                 All
               </button>
 
-              <button>
+              <button
+                className={
+                  contentFilter ===
+                    "videos"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setContentFilter(
+                    "videos"
+                  );
+                }}
+              >
                 Videos
               </button>
 
-              <button>
+              <button
+                className={
+                  contentFilter ===
+                    "photos"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setContentFilter(
+                    "photos"
+                  );
+                }}
+              >
                 Photos
               </button>
 
-              <button>
-                Links
-              </button>
-
-              <button>
+              <button
+                className={
+                  contentFilter ===
+                    "discussions"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setContentFilter(
+                    "discussions"
+                  );
+                }}
+              >
                 Discussions
               </button>
+            </div>
+
+            <div className="filter-row">
+              <span>
+                Category
+              </span>
+
+              <button
+                className={
+                  categoryFilter ===
+                    "all"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setCategoryFilter(
+                    "all"
+                  );
+                }}
+              >
+                All
+              </button>
+
+              {filterCategories.map(
+                (
+                  category
+                ) => (
+                  <button
+                    key={
+                      category.id
+                    }
+                    className={
+                      categoryFilter ===
+                        category.id
+                        ? "selected"
+                        : ""
+                    }
+                    type="button"
+                    onClick={() => {
+                      setCategoryFilter(
+                        category.id
+                      );
+                    }}
+                  >
+                    {category.name}
+                  </button>
+                )
+              )}
+            </div>
+
+            <div className="filter-row">
+              <span>
+                Tags
+              </span>
+
+              <button
+                className={
+                  tagFilter ===
+                    "all"
+                    ? "selected"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setTagFilter(
+                    "all"
+                  );
+                }}
+              >
+                All
+              </button>
+
+              {filterTags.map(
+                (
+                  articleTag
+                ) => (
+                  <button
+                    key={
+                      articleTag.id
+                    }
+                    className={
+                      tagFilter ===
+                        articleTag.id
+                        ? "selected"
+                        : ""
+                    }
+                    type="button"
+                    onClick={() => {
+                      setTagFilter(
+                        articleTag.id
+                      );
+                    }}
+                  >
+                    #
+                    {articleTag.name}
+                  </button>
+                )
+              )}
             </div>
           </div>
         )}
@@ -1204,16 +2093,66 @@ const happeningPosts =
               </div>
 
               <span>
+                {filteredPosts.length} shown
+                {" · "}
                 Latest first
               </span>
             </div>
 
- {livePosts.map((post) => (
-  <PostCard
-    key={post.id}
-    post={post}
-  />
-))}
+            {filteredPosts.length ===
+              0 ? (
+              <div className="feed-empty-filter">
+                <strong>
+                  Nothing matches that.
+                </strong>
+
+                <span>
+                  ROFFLE looked. The nonsense is elsewhere.
+                </span>
+
+                {activeFilterCount >
+                  0 && (
+                  <button
+                    type="button"
+                    onClick={
+                      clearFilters
+                    }
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              filteredPosts.map(
+                (
+                  post
+                ) => (
+                  <PostCard
+                    key={
+                      post.id
+                    }
+                    post={
+                      post
+                    }
+                    session={
+                      session
+                    }
+                    onToggleLike={
+                      handleToggleLike
+                    }
+                    onCommentCountChanged={
+                      handleCommentCountChanged
+                    }
+                    isStaff={
+                      accessRole ===
+                        "moderator" ||
+                      accessRole ===
+                        "admin"
+                    }
+                  />
+                )
+              )
+            )}
 
             <div className="pagination">
               <button disabled>
@@ -1250,39 +2189,58 @@ const happeningPosts =
               }
             >
               <div className="gem-list">
-                {youtubeGems.map(
-                  (gem, index) => (
-                    <a
-                      className="gem"
-                      href="#gem"
-                      key={gem.title}
-                    >
-                      <div className="gem-image">
-                        <img
-                          src={
-                            gem.image
-                          }
-                          alt=""
-                        />
-
-                        <span>
-                          <Play
-                            size={14}
-                            fill="currentColor"
+                {youtubeGems.length ===
+                  0 ? (
+                  <div className="gem-empty">
+                    No YouTube gems yet.
+                  </div>
+                ) : (
+                  youtubeGems.map(
+                    (
+                      gem
+                    ) => (
+                      <a
+                        className="gem"
+                        href={`#post-${gem.id}`}
+                        key={gem.id}
+                      >
+                        <div className="gem-image">
+                          <img
+                            src={`https://i.ytimg.com/vi/${gem.youtubeId}/hqdefault.jpg`}
+                            alt=""
                           />
-                        </span>
-                      </div>
 
-                      <div>
-                        <strong>
-                          {gem.title}
-                        </strong>
+                          <span>
+                            <Play
+                              size={14}
+                              fill="currentColor"
+                            />
+                          </span>
+                        </div>
 
-                        <small>
-                          {index + 4} videos
-                        </small>
-                      </div>
-                    </a>
+                        <div>
+                          <strong>
+                            {gem.title}
+                          </strong>
+
+                          <small className="gem-engagement">
+                            <span>
+                              <Heart
+                                size={11}
+                              />
+                              {gem.likeCount}
+                            </span>
+
+                            <span>
+                              <MessageCircle
+                                size={11}
+                              />
+                              {gem.commentCount}
+                            </span>
+                          </small>
+                        </div>
+                      </a>
+                    )
                   )
                 )}
               </div>
@@ -1406,24 +2364,26 @@ const happeningPosts =
               </div>
             </RailModule>
 
-            <section className="join-card">
-              <div className="join-orb">
-                R
-              </div>
+            {!session && (
+              <section className="join-card">
+                <div className="join-orb">
+                  R
+                </div>
 
-              <h3>
-                You're already here.
-              </h3>
+                <h3>
+                  You're already here.
+                </h3>
 
-              <p>
-                Might as well make an
-                account.
-              </p>
+                <p>
+                  Might as well make an
+                  account.
+                </p>
 
-              <a href="/login">
-                Join ROFFLE
-              </a>
-            </section>
+                <a href="/login">
+                  Join ROFFLE
+                </a>
+              </section>
+            )}
           </aside>
         </div>
       </main>

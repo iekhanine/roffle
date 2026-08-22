@@ -7,6 +7,7 @@ import {
 import {
   CheckCircle2,
   Image as ImageIcon,
+  Images,
   Send,
   Type,
   UploadCloud,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import {
+  fetchYouTubeMetadata,
   parseYouTubeUrl,
 } from "../../lib/youtube";
 
@@ -22,10 +24,25 @@ import {
   createQuickPost,
 } from "../../services/posts";
 
+import {
+  getActiveTaxonomy,
+} from "../../services/taxonomy";
+
+import type {
+  GiphyGif,
+} from "../../services/giphy";
+
 import type {
   PostRecord,
   QuickPostType,
 } from "../../types/post";
+
+import type {
+  PostCategory,
+  PostTag,
+} from "../../types/taxonomy";
+
+import GiphyPicker from "./GiphyPicker";
 
 import "./QuickPostDialog.css";
 
@@ -33,6 +50,7 @@ import "./QuickPostDialog.css";
 /* ==========================================================
    ROFFLE
    QUICK POST DIALOG
+   YouTube + Text + Image + Optional GIPHY Attachment
    ========================================================== */
 
 
@@ -95,6 +113,20 @@ export default function QuickPostDialog({
     );
 
   const [
+    gifOpen,
+    setGifOpen,
+  ] =
+    useState(false);
+
+  const [
+    selectedGif,
+    setSelectedGif,
+  ] =
+    useState<GiphyGif | null>(
+      null
+    );
+
+  const [
     saving,
     setSaving,
   ] =
@@ -116,6 +148,75 @@ export default function QuickPostDialog({
       null
     );
 
+  const [
+    categories,
+    setCategories,
+  ] =
+    useState<PostCategory[]>(
+      []
+    );
+
+  const [
+    availableTags,
+    setAvailableTags,
+  ] =
+    useState<PostTag[]>(
+      []
+    );
+
+  const [
+    selectedCategoryId,
+    setSelectedCategoryId,
+  ] =
+    useState("");
+
+  const [
+    selectedTagIds,
+    setSelectedTagIds,
+  ] =
+    useState<string[]>(
+      []
+    );
+
+  const [
+    taxonomyLoading,
+    setTaxonomyLoading,
+  ] =
+    useState(false);
+
+  const [
+    taxonomyError,
+    setTaxonomyError,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    youtubeTitleMode,
+    setYoutubeTitleMode,
+  ] =
+    useState<
+      "auto"
+      | "user"
+    >(
+      "auto"
+    );
+
+  const [
+    youtubeTitleLoading,
+    setYoutubeTitleLoading,
+  ] =
+    useState(false);
+
+  const [
+    youtubeTitleError,
+    setYoutubeTitleError,
+  ] =
+    useState<string | null>(
+      null
+    );
+
 
   const parsedYouTube =
     useMemo(
@@ -125,6 +226,200 @@ export default function QuickPostDialog({
         ),
       [youtubeUrl]
     );
+
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let mounted = true;
+
+    setTaxonomyLoading(
+      true
+    );
+
+    setTaxonomyError(
+      null
+    );
+
+    void getActiveTaxonomy()
+      .then(
+        (
+          taxonomy
+        ) => {
+          if (!mounted) {
+            return;
+          }
+
+          setCategories(
+            taxonomy.categories
+          );
+
+          setAvailableTags(
+            taxonomy.tags
+          );
+
+          setSelectedCategoryId(
+            (
+              current
+            ) =>
+              current ||
+              taxonomy.categories
+                .find(
+                  (
+                    category
+                  ) =>
+                    category.slug ===
+                    "random"
+                )
+                ?.id ||
+              taxonomy.categories[0]
+                ?.id ||
+              ""
+          );
+        }
+      )
+      .catch(
+        (
+          nextError
+        ) => {
+          if (!mounted) {
+            return;
+          }
+
+          setTaxonomyError(
+            nextError
+              instanceof Error
+              ? nextError.message
+              : "Could not load categories and tags."
+          );
+        }
+      )
+      .finally(
+        () => {
+          if (mounted) {
+            setTaxonomyLoading(
+              false
+            );
+          }
+        }
+      );
+
+    return () => {
+      mounted = false;
+    };
+  }, [
+    open,
+  ]);
+
+
+  useEffect(() => {
+    if (
+      !open ||
+      postType !==
+        "youtube" ||
+      !parsedYouTube ||
+      youtubeTitleMode !==
+        "auto"
+    ) {
+      setYoutubeTitleLoading(
+        false
+      );
+
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    const timer =
+      window.setTimeout(
+        () => {
+          setYoutubeTitleLoading(
+            true
+          );
+
+          setYoutubeTitleError(
+            null
+          );
+
+          void fetchYouTubeMetadata(
+            parsedYouTube
+              .canonicalUrl,
+            controller.signal
+          )
+            .then(
+              (
+                metadata
+              ) => {
+                if (
+                  controller.signal
+                    .aborted
+                ) {
+                  return;
+                }
+
+                setTitle(
+                  metadata.title
+                    .slice(
+                      0,
+                      180
+                    )
+                );
+              }
+            )
+            .catch(
+              (
+                nextError
+              ) => {
+                if (
+                  controller.signal
+                    .aborted
+                ) {
+                  return;
+                }
+
+                console.warn(
+                  "ROFFLE YOUTUBE TITLE ERROR:",
+                  nextError
+                );
+
+                setYoutubeTitleError(
+                  "Could not fetch the YouTube title. You can type one manually."
+                );
+              }
+            )
+            .finally(
+              () => {
+                if (
+                  !controller.signal
+                    .aborted
+                ) {
+                  setYoutubeTitleLoading(
+                    false
+                  );
+                }
+              }
+            );
+        },
+        350
+      );
+
+    return () => {
+      window.clearTimeout(
+        timer
+      );
+
+      controller.abort();
+    };
+  }, [
+    open,
+    postType,
+    parsedYouTube
+      ?.canonicalUrl,
+    youtubeTitleMode,
+  ]);
 
 
   useEffect(() => {
@@ -199,6 +494,34 @@ export default function QuickPostDialog({
     setYoutubeUrl("");
     setBody("");
 
+    setYoutubeTitleMode(
+      "auto"
+    );
+
+    setYoutubeTitleLoading(
+      false
+    );
+
+    setYoutubeTitleError(
+      null
+    );
+
+    setSelectedCategoryId(
+      categories.find(
+        (
+          category
+        ) =>
+          category.slug ===
+          "random"
+      )?.id ??
+      categories[0]?.id ??
+      ""
+    );
+
+    setSelectedTagIds(
+      []
+    );
+
     if (imagePreview) {
       URL.revokeObjectURL(
         imagePreview
@@ -207,6 +530,9 @@ export default function QuickPostDialog({
 
     setImage(null);
     setImagePreview(null);
+
+    setGifOpen(false);
+    setSelectedGif(null);
 
     setSaving(false);
     setError(null);
@@ -218,6 +544,20 @@ export default function QuickPostDialog({
     resetForm();
     onClose();
   };
+
+
+  const changePostType =
+    (
+      next:
+        QuickPostType
+    ) => {
+      setPostType(
+        next
+      );
+
+      setError(null);
+      setPostedMessage(null);
+    };
 
 
   const selectImage =
@@ -243,6 +583,44 @@ export default function QuickPostDialog({
     };
 
 
+  const toggleTag =
+    (
+      tagId: string,
+    ) => {
+      setSelectedTagIds(
+        (
+          current
+        ) => {
+          if (
+            current.includes(
+              tagId
+            )
+          ) {
+            return current.filter(
+              (
+                id
+              ) =>
+                id !==
+                tagId
+            );
+          }
+
+          if (
+            current.length >=
+            5
+          ) {
+            return current;
+          }
+
+          return [
+            ...current,
+            tagId,
+          ];
+        }
+      );
+    };
+
+
   const submit =
     async () => {
       setSaving(true);
@@ -264,7 +642,18 @@ export default function QuickPostDialog({
 
                 title,
 
+                body,
+
                 youtubeUrl,
+
+                categoryId:
+                  selectedCategoryId,
+
+                tagIds:
+                  selectedTagIds,
+
+                gif:
+                  selectedGif,
               }
             );
         } else if (
@@ -280,6 +669,15 @@ export default function QuickPostDialog({
                 title,
 
                 body,
+
+                categoryId:
+                  selectedCategoryId,
+
+                tagIds:
+                  selectedTagIds,
+
+                gif:
+                  selectedGif,
               }
             );
         } else {
@@ -300,6 +698,15 @@ export default function QuickPostDialog({
                 body,
 
                 image,
+
+                categoryId:
+                  selectedCategoryId,
+
+                tagIds:
+                  selectedTagIds,
+
+                gif:
+                  selectedGif,
               }
             );
         }
@@ -324,11 +731,59 @@ export default function QuickPostDialog({
       } catch (
         nextError
       ) {
-        const message =
+        console.error(
+          "ROFFLE POST CREATE ERROR:",
+          nextError
+        );
+
+        let message =
+          "ROFFLE could not create the post.";
+
+        if (
           nextError
             instanceof Error
-            ? nextError.message
-            : "ROFFLE could not create the post.";
+        ) {
+          message =
+            nextError.message;
+        } else if (
+          nextError &&
+          typeof nextError ===
+            "object" &&
+          "message" in
+            nextError
+        ) {
+          const errorObject =
+            nextError as {
+              message?: unknown;
+              details?: unknown;
+              hint?: unknown;
+              code?: unknown;
+            };
+
+          const parts = [
+            errorObject.message,
+            errorObject.details,
+            errorObject.hint,
+          ]
+            .filter(
+              (
+                value
+              ) =>
+                typeof value ===
+                  "string" &&
+                value.trim()
+                  .length > 0
+            )
+            .map(
+              String
+            );
+
+          message =
+            parts.join(
+              " — "
+            ) ||
+            "ROFFLE could not create the post.";
+        }
 
         setError(
           message
@@ -340,22 +795,40 @@ export default function QuickPostDialog({
 
 
   const canSubmit =
-    postType === "youtube"
-      ? Boolean(
-          parsedYouTube
-        )
-      : postType === "text"
+    Boolean(
+      selectedCategoryId
+    ) &&
+    !taxonomyLoading &&
+    (
+      postType ===
+        "youtube"
         ? Boolean(
-            title.trim()
-          ) &&
-          title.trim()
-            .length <= 180 &&
-          Boolean(
-            body.trim()
+            parsedYouTube
           ) &&
           body.trim()
-            .length <= 500
-        : Boolean(image);
+            .length <=
+            500
+        : postType ===
+            "text"
+          ? Boolean(
+              title.trim()
+            ) &&
+            title.trim()
+              .length <=
+              180 &&
+            Boolean(
+              body.trim()
+            ) &&
+            body.trim()
+              .length <=
+              500
+          : Boolean(
+              image
+            ) &&
+            body.trim()
+              .length <=
+              500
+    );
 
 
   return (
@@ -414,11 +887,9 @@ export default function QuickPostDialog({
                 : ""
             }
             onClick={() => {
-              setPostType(
+              changePostType(
                 "youtube"
               );
-
-              setError(null);
             }}
           >
             <Video size={16} />
@@ -434,11 +905,9 @@ export default function QuickPostDialog({
                 : ""
             }
             onClick={() => {
-              setPostType(
+              changePostType(
                 "text"
               );
-
-              setError(null);
             }}
           >
             <Type size={16} />
@@ -454,11 +923,9 @@ export default function QuickPostDialog({
                 : ""
             }
             onClick={() => {
-              setPostType(
+              changePostType(
                 "image"
               );
-
-              setError(null);
             }}
           >
             <ImageIcon size={16} />
@@ -483,12 +950,24 @@ export default function QuickPostDialog({
                   onChange={
                     (
                       event
-                    ) =>
+                    ) => {
                       setYoutubeUrl(
                         event
                           .target
                           .value
-                      )
+                      );
+
+                      if (
+                        youtubeTitleMode ===
+                        "auto"
+                      ) {
+                        setTitle("");
+                      }
+
+                      setYoutubeTitleError(
+                        null
+                      );
+                    }
                   }
                   placeholder="https://youtube.com/shorts/..."
                   autoFocus
@@ -498,8 +977,15 @@ export default function QuickPostDialog({
               <label className="quick-post-field">
                 <span>
                   Title
+
                   <small>
-                    optional
+                    {youtubeTitleLoading
+                      ? "fetching from YouTube..."
+                      : youtubeTitleMode ===
+                          "auto" &&
+                        title
+                        ? `from YouTube · ${title.length}/180`
+                        : `editable · ${title.length}/180`}
                   </small>
                 </span>
 
@@ -512,14 +998,73 @@ export default function QuickPostDialog({
                   onChange={
                     (
                       event
-                    ) =>
+                    ) => {
                       setTitle(
+                        event
+                          .target
+                          .value
+                      );
+
+                      setYoutubeTitleMode(
+                        "user"
+                      );
+                    }
+                  }
+                  placeholder={
+                    youtubeTitleLoading
+                      ? "Getting the YouTube title..."
+                      : "YouTube title appears here automatically."
+                  }
+                />
+
+                <div className="quick-post-youtube-title-tools">
+                  {youtubeTitleMode ===
+                    "user" &&
+                    parsedYouTube && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setYoutubeTitleMode(
+                          "auto"
+                        );
+
+                        setTitle("");
+                      }}
+                    >
+                      Use YouTube title
+                    </button>
+                  )}
+
+                  {youtubeTitleError && (
+                    <span>
+                      {youtubeTitleError}
+                    </span>
+                  )}
+                </div>
+              </label>
+
+              <label className="quick-post-field">
+                <span>
+                  Commentary
+                  <small>
+                    optional · {body.length}/500
+                  </small>
+                </span>
+
+                <textarea
+                  value={body}
+                  maxLength={500}
+                  onChange={
+                    (
+                      event
+                    ) =>
+                      setBody(
                         event
                           .target
                           .value
                       )
                   }
-                  placeholder="Give it a name, or don't."
+                  placeholder="Add context, a one-liner, or explain why we're watching this."
                 />
               </label>
 
@@ -616,7 +1161,7 @@ export default function QuickPostDialog({
               </label>
 
               <div className="quick-post-text-note">
-                Happening on ROFFLE will show only the title over a random background image.
+                Happening on ROFFLE uses the title over the post's background image.
               </div>
             </>
           )}
@@ -668,7 +1213,7 @@ export default function QuickPostDialog({
                 <span>
                   Title
                   <small>
-                    optional
+                    optional · {title.length}/180
                   </small>
                 </span>
 
@@ -694,9 +1239,9 @@ export default function QuickPostDialog({
 
               <label className="quick-post-field">
                 <span>
-                  Caption
+                  Caption / commentary
                   <small>
-                    optional
+                    optional · {body.length}/500
                   </small>
                 </span>
 
@@ -718,6 +1263,209 @@ export default function QuickPostDialog({
               </label>
             </>
           )}
+
+          <section className="quick-post-taxonomy-section">
+            <div className="quick-post-section-heading">
+              <strong>
+                Category & tags
+              </strong>
+
+              <span>
+                One category. Up to five tags.
+              </span>
+            </div>
+
+            {taxonomyLoading ? (
+              <div className="quick-post-taxonomy-message">
+                Loading categories and tags...
+              </div>
+            ) : taxonomyError ? (
+              <div className="quick-post-inline-error">
+                {taxonomyError}
+              </div>
+            ) : (
+              <>
+                <label className="quick-post-field quick-post-category-field">
+                  <span>
+                    Category
+                    <small>
+                      required
+                    </small>
+                  </span>
+
+                  <select
+                    value={
+                      selectedCategoryId
+                    }
+                    onChange={
+                      (
+                        event
+                      ) => {
+                        setSelectedCategoryId(
+                          event.target
+                            .value
+                        );
+                      }
+                    }
+                  >
+                    {categories.map(
+                      (
+                        category
+                      ) => (
+                        <option
+                          key={
+                            category.id
+                          }
+                          value={
+                            category.id
+                          }
+                        >
+                          {category.name}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </label>
+
+                <div className="quick-post-tags-field">
+                  <div className="quick-post-tags-heading">
+                    <strong>
+                      Article tags
+                    </strong>
+
+                    <span>
+                      {selectedTagIds.length}/5 selected
+                    </span>
+                  </div>
+
+                  <div className="quick-post-tag-options">
+                    {availableTags.map(
+                      (
+                        tag
+                      ) => {
+                        const selected =
+                          selectedTagIds.includes(
+                            tag.id
+                          );
+
+                        const unavailable =
+                          !selected &&
+                          selectedTagIds.length >=
+                            5;
+
+                        return (
+                          <button
+                            key={
+                              tag.id
+                            }
+                            type="button"
+                            className={
+                              selected
+                                ? "selected"
+                                : ""
+                            }
+                            disabled={
+                              unavailable
+                            }
+                            onClick={() => {
+                              toggleTag(
+                                tag.id
+                              );
+                            }}
+                          >
+                            #
+                            {tag.name}
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+
+          <section className="quick-post-gif-section">
+            <div className="quick-post-gif-heading">
+              <div>
+                <Images size={16} />
+
+                <div>
+                  <strong>
+                    SEARCH GIPHY because you need help
+                  </strong>
+
+                  <span>
+                    I mean, it's optional. You choose to do this.
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setGifOpen(
+                    (
+                      current
+                    ) =>
+                      !current
+                  );
+                }}
+              >
+                {gifOpen
+                  ? "Close search"
+                  : selectedGif
+                    ? "Change GIF"
+                    : "Add GIF"}
+              </button>
+            </div>
+
+            {selectedGif && (
+              <div className="quick-post-selected-gif">
+                <img
+                  src={
+                    selectedGif.url
+                  }
+                  alt={
+                    selectedGif.title
+                  }
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedGif(
+                      null
+                    );
+                  }}
+                >
+                  <X size={14} />
+                  Remove GIF
+                </button>
+              </div>
+            )}
+
+            {gifOpen && (
+              <GiphyPicker
+                selected={
+                  selectedGif
+                }
+                onSelect={
+                  (
+                    gif
+                  ) => {
+                    setSelectedGif(
+                      gif
+                    );
+
+                    setGifOpen(
+                      false
+                    );
+                  }
+                }
+              />
+            )}
+          </section>
 
           {error && (
             <div className="quick-post-error">

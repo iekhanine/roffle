@@ -7,6 +7,8 @@ import type {
   ModerationPost,
   MyAccess,
   UserRole,
+  FlaggedComment,
+  RejectedPost,
 } from "../types/admin";
 
 
@@ -213,6 +215,156 @@ export async function setAccountStatus(
 
         new_status:
           status,
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
+
+/* ==========================================================
+   FLAGGED COMMENTS
+   ========================================================== */
+
+
+export async function getFlaggedComments() {
+  const {
+    data,
+    error,
+  } =
+    await supabase.rpc(
+      "admin_flagged_comments"
+    );
+
+  if (error) {
+    throw error;
+  }
+
+  return (
+    data ??
+    []
+  ).map(
+    (
+      row:
+        Record<string, any>
+    ) => ({
+      comment_id:
+        row.comment_id,
+
+      post_id:
+        row.post_id,
+
+      comment_body:
+        row.comment_body ??
+        null,
+
+      comment_gif_url:
+        row.comment_gif_url ??
+        null,
+
+      comment_user_id:
+        row.comment_user_id,
+
+      author_username:
+        row.author_username ??
+        null,
+
+      author_display_name:
+        row.author_display_name,
+
+      report_count:
+        Number(
+          row.report_count ??
+          0
+        ),
+
+      first_reported_at:
+        row.first_reported_at,
+
+      last_reported_at:
+        row.last_reported_at,
+    })
+  ) as FlaggedComment[];
+}
+
+
+/* ==========================================================
+   REJECTED POSTS
+   ========================================================== */
+
+
+export async function getRejectedPosts() {
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("posts")
+      .select(`
+        id,
+        user_id,
+        post_type,
+        title,
+        body,
+        youtube_url,
+        image_url,
+        created_at,
+        moderated_at,
+        moderation_note,
+        moderation_status,
+        profiles!posts_user_id_fkey (
+          username,
+          display_name
+        )
+      `)
+      .eq(
+        "moderation_status",
+        "rejected"
+      )
+      .order(
+        "moderated_at",
+        {
+          ascending:
+            false,
+        }
+      );
+
+  if (error) {
+    throw error;
+  }
+
+  return (
+    data ??
+    []
+  ) as unknown as
+    RejectedPost[];
+}
+
+
+export async function restoreRejectedPost(
+  postId: string,
+) {
+  await moderatePost(
+    postId,
+    "approved",
+    "Restored from rejected posts."
+  );
+}
+
+
+export async function permanentlyDeleteRejectedPost(
+  postId: string,
+) {
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      "admin_delete_rejected_post",
+      {
+        target_post:
+          postId,
       }
     );
 

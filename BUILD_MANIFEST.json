@@ -1,0 +1,11 @@
+{
+  "src/AppV2.tsx": 50102,
+  "src/components/posts/QuickPostDialog.tsx": 31897,
+  "src/components/admin/TaxonomyManager.tsx": 14008,
+  "src/lib/youtube.ts": 3156,
+  "src/pages/admin/Admin.tsx": 9394,
+  "src/services/posts.ts": 13935,
+  "src/services/taxonomy.ts": 4303,
+  "src/types/post.ts": 2028,
+  "src/types/taxonomy.ts": 660
+}

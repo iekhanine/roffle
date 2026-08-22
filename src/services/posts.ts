@@ -4,8 +4,13 @@ import {
   parseYouTubeUrl,
 } from "../lib/youtube";
 
+import {
+  attachPostEngagement,
+} from "./engagement";
+
 import type {
   CreateQuickPostInput,
+  GifAttachment,
   PostRecord,
 } from "../types/post";
 
@@ -43,6 +48,26 @@ function cleanOptionalText(
     value?.trim() ?? "";
 
   return cleaned || null;
+}
+
+
+function getGifFields(
+  gif?:
+    GifAttachment | null,
+) {
+  return {
+    gif_id:
+      gif?.id ??
+      null,
+
+    gif_url:
+      gif?.url ??
+      null,
+
+    gif_preview_url:
+      gif?.previewUrl ??
+      null,
+  };
 }
 
 
@@ -166,8 +191,417 @@ async function uploadPostImage(
 
 
 /* ==========================================================
+   TAXONOMY HYDRATION
+   ========================================================== */
+
+
+async function attachTaxonomy(
+  rows:
+    PostRecord[],
+): Promise<PostRecord[]> {
+  if (
+    rows.length === 0
+  ) {
+    return [];
+  }
+
+  const categoryIds =
+    Array.from(
+      new Set(
+        rows
+          .map(
+            (
+              row
+            ) =>
+              row.category_id
+          )
+          .filter(
+            (
+              value
+            ):
+              value is string =>
+                Boolean(value)
+          )
+      )
+    );
+
+  const postIds =
+    rows.map(
+      (
+        row
+      ) =>
+        row.id
+    );
+
+
+  const [
+    categoriesResult,
+    postTagsResult,
+  ] =
+    await Promise.all([
+      categoryIds.length >
+        0
+        ? supabase
+            .from(
+              "post_categories"
+            )
+            .select(
+              "id, name, slug"
+            )
+            .in(
+              "id",
+              categoryIds
+            )
+        : Promise.resolve({
+            data: [],
+            error: null,
+          }),
+
+      supabase
+        .from(
+          "post_tags"
+        )
+        .select(
+          "post_id, tag_id"
+        )
+        .in(
+          "post_id",
+          postIds
+        ),
+    ]);
+
+
+  if (
+    categoriesResult.error
+  ) {
+    console.warn(
+      "ROFFLE CATEGORY LOAD ERROR:",
+      categoriesResult.error
+    );
+  }
+
+  if (
+    postTagsResult.error
+  ) {
+    console.warn(
+      "ROFFLE TAG LINK LOAD ERROR:",
+      postTagsResult.error
+    );
+  }
+
+
+  const categoryMap =
+    new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        slug: string;
+      }
+    >();
+
+  for (
+    const category
+    of categoriesResult.data ??
+    []
+  ) {
+    categoryMap.set(
+      category.id,
+      category
+    );
+  }
+
+
+  const tagIds =
+    Array.from(
+      new Set(
+        (
+          postTagsResult.data ??
+          []
+        ).map(
+          (
+            row
+          ) =>
+            row.tag_id
+        )
+      )
+    );
+
+  const {
+    data:
+      tagRows,
+    error:
+      tagsError,
+  } =
+    tagIds.length >
+      0
+      ? await supabase
+          .from(
+            "tags"
+          )
+          .select(
+            "id, name, slug"
+          )
+          .in(
+            "id",
+            tagIds
+          )
+      : {
+          data: [],
+          error: null,
+        };
+
+
+  if (tagsError) {
+    console.warn(
+      "ROFFLE TAG LOAD ERROR:",
+      tagsError
+    );
+  }
+
+
+  const tagMap =
+    new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        slug: string;
+      }
+    >();
+
+  for (
+    const tag
+    of tagRows ?? []
+  ) {
+    tagMap.set(
+      tag.id,
+      tag
+    );
+  }
+
+
+  const tagsByPost =
+    new Map<
+      string,
+      Array<{
+        id: string;
+        name: string;
+        slug: string;
+      }>
+    >();
+
+  for (
+    const link
+    of postTagsResult.data ??
+    []
+  ) {
+    const tag =
+      tagMap.get(
+        link.tag_id
+      );
+
+    if (!tag) {
+      continue;
+    }
+
+    const existing =
+      tagsByPost.get(
+        link.post_id
+      ) ??
+      [];
+
+    existing.push(
+      tag
+    );
+
+    tagsByPost.set(
+      link.post_id,
+      existing
+    );
+  }
+
+
+  return rows.map(
+    (
+      row
+    ) => ({
+      ...row,
+
+      category:
+        row.category_id
+          ? categoryMap.get(
+              row.category_id
+            ) ??
+            null
+          : null,
+
+      tags:
+        tagsByPost.get(
+          row.id
+        ) ??
+        [],
+    })
+  );
+}
+
+
+/* ==========================================================
    CREATE POST
    ========================================================== */
+
+
+async function attachProfiles(
+  rows:
+    Array<Record<string, any>>,
+): Promise<PostRecord[]> {
+  if (
+    rows.length === 0
+  ) {
+    return [];
+  }
+
+  const userIds =
+    Array.from(
+      new Set(
+        rows
+          .map(
+            (
+              row
+            ) =>
+              row.user_id as
+                string | undefined
+          )
+          .filter(
+            (
+              value
+            ):
+              value is string =>
+                Boolean(value)
+          )
+      )
+    );
+
+
+  if (
+    userIds.length === 0
+  ) {
+    return rows.map(
+      (
+        row
+      ) => ({
+        ...row,
+
+        profiles:
+          null,
+      })
+    ) as unknown as
+      PostRecord[];
+  }
+
+
+  const {
+    data:
+      profileRows,
+    error:
+      profileError,
+  } =
+    await supabase
+      .from("profiles")
+      .select(
+        "id, display_name, avatar_url"
+      )
+      .in(
+        "id",
+        userIds
+      );
+
+
+  if (profileError) {
+    console.warn(
+      "ROFFLE PROFILE LOAD ERROR:",
+      profileError
+    );
+  }
+
+
+  const profileMap =
+    new Map<
+      string,
+      {
+        display_name:
+          string;
+        avatar_url:
+          string | null;
+      }
+    >();
+
+
+  for (
+    const profile
+    of profileRows ?? []
+  ) {
+    profileMap.set(
+      profile.id,
+      {
+        display_name:
+          profile.display_name,
+
+        avatar_url:
+          profile.avatar_url,
+      }
+    );
+  }
+
+
+  return rows.map(
+    (
+      row
+    ) => ({
+      ...row,
+
+      gif_id:
+        row.gif_id ??
+        null,
+
+      gif_url:
+        row.gif_url ??
+        null,
+
+      gif_preview_url:
+        row.gif_preview_url ??
+        null,
+
+      moderation_status:
+        row.moderation_status ??
+        (
+          row.published
+            ? "approved"
+            : "pending"
+        ),
+
+      submitted_at:
+        row.submitted_at ??
+        row.created_at ??
+        null,
+
+      moderated_at:
+        row.moderated_at ??
+        null,
+
+      moderation_note:
+        row.moderation_note ??
+        null,
+
+      profiles:
+        profileMap.get(
+          row.user_id
+        ) ??
+        null,
+    })
+  ) as unknown as
+    PostRecord[];
+}
 
 
 export async function createQuickPost(
@@ -177,11 +611,37 @@ export async function createQuickPost(
   const user =
     await getCurrentUser();
 
+  if (
+    !input.categoryId
+  ) {
+    throw new Error(
+      "Choose a category."
+    );
+  }
+
+  if (
+    input.tagIds.length >
+    5
+  ) {
+    throw new Error(
+      "Choose no more than five tags."
+    );
+  }
+
   let storagePath:
     string | null = null;
 
   let payload:
     Record<string, unknown>;
+
+
+  const optionalGif =
+    input.gif
+      ? getGifFields(
+          input.gif
+        )
+      : {};
+
 
   if (
     input.postType ===
@@ -205,13 +665,18 @@ export async function createQuickPost(
       post_type:
         "youtube",
 
+      category_id:
+        input.categoryId,
+
       title:
         cleanOptionalText(
           input.title
         ),
 
       body:
-        null,
+        cleanOptionalText(
+          input.body
+        ),
 
       youtube_url:
         parsed.canonicalUrl,
@@ -224,6 +689,8 @@ export async function createQuickPost(
 
       image_url:
         null,
+
+      ...optionalGif,
 
       published:
         true,
@@ -273,6 +740,9 @@ export async function createQuickPost(
       post_type:
         "text",
 
+      category_id:
+        input.categoryId,
+
       title,
 
       body,
@@ -288,6 +758,8 @@ export async function createQuickPost(
 
       image_url:
         null,
+
+      ...optionalGif,
 
       published:
         true,
@@ -308,6 +780,9 @@ export async function createQuickPost(
 
       post_type:
         "image",
+
+      category_id:
+        input.categoryId,
 
       title:
         cleanOptionalText(
@@ -331,10 +806,13 @@ export async function createQuickPost(
       image_url:
         uploaded.imageUrl,
 
+      ...optionalGif,
+
       published:
         true,
     };
   }
+
 
   const {
     data,
@@ -343,29 +821,9 @@ export async function createQuickPost(
     await supabase
       .from("posts")
       .insert(payload)
-      .select(`
-        id,
-        user_id,
-        post_type,
-        title,
-        body,
-        youtube_url,
-        youtube_id,
-        video_type,
-        image_url,
-        published,
-        moderation_status,
-        submitted_at,
-        moderated_at,
-        moderation_note,
-        created_at,
-        updated_at,
-        profiles!posts_user_id_fkey (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select("*")
       .single();
+
 
   if (error) {
     if (storagePath) {
@@ -381,7 +839,71 @@ export async function createQuickPost(
     throw error;
   }
 
-  return data as unknown as PostRecord;
+
+  const {
+    error:
+      taxonomyError,
+  } =
+    await supabase.rpc(
+      "set_post_tags",
+      {
+        target_post:
+          data.id,
+
+        tag_ids:
+          input.tagIds,
+      }
+    );
+
+
+  if (taxonomyError) {
+    await supabase
+      .from(
+        "posts"
+      )
+      .delete()
+      .eq(
+        "id",
+        data.id
+      )
+      .eq(
+        "user_id",
+        user.id
+      );
+
+    if (storagePath) {
+      await supabase.storage
+        .from(
+          POST_IMAGE_BUCKET
+        )
+        .remove([
+          storagePath,
+        ]);
+    }
+
+    throw taxonomyError;
+  }
+
+
+  const profiled =
+    await attachProfiles([
+      data as
+        Record<string, any>,
+    ]);
+
+  const attached =
+    await attachTaxonomy(
+      profiled
+    );
+
+
+  return {
+    ...attached[0],
+
+    like_count: 0,
+    comment_count: 0,
+    liked_by_me: false,
+  };
 }
 
 
@@ -397,28 +919,7 @@ export async function getFeedPosts() {
   } =
     await supabase
       .from("posts")
-      .select(`
-        id,
-        user_id,
-        post_type,
-        title,
-        body,
-        youtube_url,
-        youtube_id,
-        video_type,
-        image_url,
-        published,
-        moderation_status,
-        submitted_at,
-        moderated_at,
-        moderation_note,
-        created_at,
-        updated_at,
-        profiles!posts_user_id_fkey (
-          display_name,
-          avatar_url
-        )
-      `)
+      .select("*")
       .order(
         "created_at",
         {
@@ -428,12 +929,55 @@ export async function getFeedPosts() {
       )
       .limit(50);
 
+
   if (error) {
+    console.error(
+      "ROFFLE POSTS QUERY ERROR:",
+      {
+        message:
+          error.message,
+
+        code:
+          error.code,
+
+        details:
+          error.details,
+
+        hint:
+          error.hint,
+      }
+    );
+
     throw error;
   }
 
-  return (
-    data ??
-    []
-  ) as unknown as PostRecord[];
+
+  const profiledRecords =
+    await attachProfiles(
+      (
+        data ??
+        []
+      ) as
+        Array<
+          Record<string, any>
+        >
+    );
+
+  const records =
+    await attachTaxonomy(
+      profiledRecords
+    );
+
+  const mainFeedRecords =
+    records.filter(
+      (
+        post
+      ) =>
+        post.moderation_status !==
+          "rejected"
+    );
+
+  return attachPostEngagement(
+    mainFeedRecords
+  );
 }

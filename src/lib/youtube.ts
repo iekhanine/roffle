@@ -1,3 +1,8 @@
+import {
+  supabase,
+} from "./supabase";
+
+
 export type YouTubeVideoType = "short" | "video";
 
 export type ParsedYouTubeUrl = {
@@ -66,5 +71,120 @@ export function parseYouTubeUrl(rawValue: string): ParsedYouTubeUrl | null {
         ? `https://www.youtube.com/shorts/${youtubeId}`
         : `https://www.youtube.com/watch?v=${youtubeId}`,
     embedUrl: `https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`,
+  };
+}
+
+
+
+/* ==========================================================
+   YOUTUBE METADATA
+   Supabase Edge Function -> YouTube oEmbed
+   No YouTube API key required.
+   ========================================================== */
+
+
+export type YouTubeMetadata = {
+  title: string;
+
+  authorName:
+    string | null;
+
+  thumbnailUrl:
+    string | null;
+};
+
+
+type YouTubeMetadataFunctionResponse = {
+  title?: string;
+  authorName?: string | null;
+  thumbnailUrl?: string | null;
+};
+
+
+export async function fetchYouTubeMetadata(
+  rawUrl: string,
+  signal?:
+    AbortSignal,
+): Promise<YouTubeMetadata> {
+  const parsed =
+    parseYouTubeUrl(
+      rawUrl
+    );
+
+  if (!parsed) {
+    throw new Error(
+      "That does not look like a valid YouTube URL."
+    );
+  }
+
+  if (
+    signal?.aborted
+  ) {
+    throw new DOMException(
+      "Aborted",
+      "AbortError"
+    );
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabase.functions
+      .invoke(
+        "youtube-metadata",
+        {
+          body: {
+            url:
+              parsed.canonicalUrl,
+          },
+        }
+      );
+
+
+  if (
+    signal?.aborted
+  ) {
+    throw new DOMException(
+      "Aborted",
+      "AbortError"
+    );
+  }
+
+
+  if (error) {
+    throw error;
+  }
+
+
+  const payload =
+    data as
+      YouTubeMetadataFunctionResponse
+      | null;
+
+
+  const title =
+    payload?.title
+      ?.trim();
+
+  if (!title) {
+    throw new Error(
+      "YouTube did not return a title."
+    );
+  }
+
+
+  return {
+    title,
+
+    authorName:
+      payload?.authorName
+        ?.trim() ??
+      null,
+
+    thumbnailUrl:
+      payload?.thumbnailUrl
+        ?.trim() ??
+      null,
   };
 }
