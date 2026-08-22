@@ -173,7 +173,7 @@ function LoginPage() {
 
             options: {
               redirectTo:
-                `${window.location.origin}/?v=2`,
+                `${window.location.origin}/`,
             },
           });
 
@@ -190,7 +190,7 @@ function LoginPage() {
   const continueToRoffle =
     () => {
       window.location.assign(
-        "/?v=2"
+        "/"
       );
     };
 
@@ -657,7 +657,7 @@ function LoginPage() {
 
           <a
             className="roffle-auth-guest"
-            href="/?v=2"
+            href="/"
           >
             Lurk, so mommy and daddy don't know...
 
@@ -687,33 +687,26 @@ function LoginPage() {
 
 
 function App() {
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
-
-  const version =
-    params
-      .get("v")
-      ?.toLowerCase();
+  const path =
+    window.location.pathname
+      .toLowerCase();
 
   if (
-    version === "2" ||
-    version === "v2"
+    path === "/login" ||
+    path === "/signin"
   ) {
-    return (
-      <Suspense
-        fallback={
-          <PrototypeLoading />
-        }
-      >
-        <AppV2 />
-      </Suspense>
-    );
+    return <LoginPage />;
   }
 
-  return <LoginPage />;
+  return (
+    <Suspense
+      fallback={
+        <PrototypeLoading />
+      }
+    >
+      <AppV2 />
+    </Suspense>
+  );
 }
-
 
 export default App;

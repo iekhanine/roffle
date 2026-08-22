@@ -622,22 +622,12 @@ function App() {
                   </button>
                 </>
               ) : (
-                <>
-                  <a
-                    className="login-link"
-                    href="/"
-                  >
-                    Log in
-                  </a>
-
-                  <a
-                    className="join-button"
-                    href="/"
-                  >
-                    <UserRound size={16} />
-                    Join ROFFLE
-                  </a>
-                </>
+                <a
+                  className="login-link"
+                  href="/login"
+                >
+                  Sign in
+                </a>
               ))}
 
             <button
@@ -699,8 +689,8 @@ function App() {
                   </button>
                 </div>
               ) : (
-                <a href="/">
-                  Log in / Join
+                <a href="/login">
+                  Sign in
                 </a>
               ))}
           </nav>
@@ -1095,7 +1085,7 @@ function App() {
                 account.
               </p>
 
-              <a href="#signup">
+              <a href="/login">
                 Join ROFFLE
               </a>
             </section>
@@ -1113,7 +1103,7 @@ function App() {
             <RoffleLogo />
 
             <p>
-              wtf internet
+              wtf internet nonsense
             </p>
           </div>
 
@@ -1141,8 +1131,8 @@ function App() {
                 ACCOUNT
               </strong>
 
-              <a href="#login">
-                Log in
+              <a href="/login">
+                Sign in
               </a>
 
               <a href="#register">
