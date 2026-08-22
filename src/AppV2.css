@@ -3557,3 +3557,41 @@ img {
   color:
     #d94411;
 }
+
+
+/* ==========================================================
+   REAL FEED PAGINATION
+   ========================================================== */
+
+
+.pagination-wrap {
+  margin-top: 18px;
+}
+
+
+.pagination-summary {
+  margin-bottom: 7px;
+
+  color:
+    var(--text-muted);
+
+  font-size: 8px;
+  font-weight: 650;
+
+  text-align: center;
+}
+
+
+.pagination-ellipsis {
+  min-width: 18px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color:
+    var(--text-muted);
+
+  font-size: 10px;
+  font-weight: 800;
+}

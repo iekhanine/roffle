@@ -87,6 +87,11 @@ type ContentFilter =
   | "photos"
   | "discussions";
 
+
+const POSTS_PER_PAGE =
+  6;
+
+
 type Post = {
   id: number | string;
   userId: string;
@@ -993,6 +998,12 @@ function App() {
     useState(false);
 
   const [
+    currentPage,
+    setCurrentPage,
+  ] =
+    useState(1);
+
+  const [
     postDialogOpen,
     setPostDialogOpen,
   ] =
@@ -1645,6 +1656,155 @@ function App() {
     );
 
 
+  const totalPages =
+    Math.max(
+      1,
+      Math.ceil(
+        filteredPosts.length /
+          POSTS_PER_PAGE
+      )
+    );
+
+
+  const paginatedPosts =
+    useMemo(
+      () => {
+        const start =
+          (
+            currentPage -
+            1
+          ) *
+          POSTS_PER_PAGE;
+
+        return filteredPosts.slice(
+          start,
+          start +
+            POSTS_PER_PAGE
+        );
+      },
+      [
+        filteredPosts,
+        currentPage,
+      ]
+    );
+
+
+  const visiblePageNumbers =
+    useMemo(
+      () => {
+        if (
+          totalPages <=
+          7
+        ) {
+          return Array.from(
+            {
+              length:
+                totalPages,
+            },
+            (
+              _,
+              index
+            ) =>
+              index + 1
+          );
+        }
+
+        const start =
+          Math.max(
+            1,
+            Math.min(
+              currentPage -
+                2,
+              totalPages -
+                4
+            )
+          );
+
+        return Array.from(
+          {
+            length: 5,
+          },
+          (
+            _,
+            index
+          ) =>
+            start +
+            index
+        );
+      },
+      [
+        currentPage,
+        totalPages,
+      ]
+    );
+
+
+  useEffect(() => {
+    if (
+      currentPage >
+      totalPages
+    ) {
+      setCurrentPage(
+        totalPages
+      );
+    }
+  }, [
+    currentPage,
+    totalPages,
+  ]);
+
+
+  useEffect(() => {
+    setCurrentPage(
+      1
+    );
+  }, [
+    timeFilter,
+    contentFilter,
+    categoryFilter,
+    tagFilter,
+  ]);
+
+
+  const goToPage =
+    (
+      page:
+        number
+    ) => {
+      const nextPage =
+        Math.min(
+          totalPages,
+          Math.max(
+            1,
+            page
+          )
+        );
+
+      setCurrentPage(
+        nextPage
+      );
+
+      window.setTimeout(
+        () => {
+          document
+            .querySelector(
+              ".feed-column"
+            )
+            ?.scrollIntoView(
+              {
+                behavior:
+                  "smooth",
+
+                block:
+                  "start",
+              }
+            );
+        },
+        0
+      );
+    };
+
+
   const activeFilterCount =
     (
       timeFilter !==
@@ -2184,7 +2344,7 @@ function App() {
 
                 <span>
                   {filteredPosts.length} of{" "}
-                  {livePosts.length} shown
+                  {livePosts.length} matching
                 </span>
               </div>
 
@@ -2499,7 +2659,7 @@ function App() {
                 )}
               </div>
             ) : (
-              filteredPosts.map(
+              paginatedPosts.map(
                 (
                   post
                 ) => (
@@ -2548,27 +2708,143 @@ function App() {
               )
             )}
 
-            <div className="pagination">
-              <button disabled>
-                Previous
-              </button>
+            {filteredPosts.length >
+              0 && (
+              <div className="pagination-wrap">
+                <div className="pagination-summary">
+                  Showing{" "}
+                  {(
+                    (
+                      currentPage -
+                      1
+                    ) *
+                    POSTS_PER_PAGE
+                  ) +
+                    1}
+                  {"–"}
+                  {Math.min(
+                    currentPage *
+                      POSTS_PER_PAGE,
+                    filteredPosts.length
+                  )}{" "}
+                  of{" "}
+                  {filteredPosts.length}
+                </div>
 
-              <button className="page-current">
-                1
-              </button>
+                <div className="pagination">
+                  <button
+                    type="button"
+                    disabled={
+                      currentPage ===
+                      1
+                    }
+                    onClick={() => {
+                      goToPage(
+                        currentPage -
+                          1
+                      );
+                    }}
+                  >
+                    Previous
+                  </button>
 
-              <button>
-                2
-              </button>
+                  {visiblePageNumbers[0] >
+                    1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          goToPage(
+                            1
+                          );
+                        }}
+                      >
+                        1
+                      </button>
 
-              <button>
-                3
-              </button>
+                      {visiblePageNumbers[0] >
+                        2 && (
+                        <span className="pagination-ellipsis">
+                          …
+                        </span>
+                      )}
+                    </>
+                  )}
 
-              <button>
-                Next
-              </button>
-            </div>
+                  {visiblePageNumbers.map(
+                    (
+                      pageNumber
+                    ) => (
+                      <button
+                        key={
+                          pageNumber
+                        }
+                        type="button"
+                        className={
+                          currentPage ===
+                            pageNumber
+                            ? "page-current"
+                            : ""
+                        }
+                        onClick={() => {
+                          goToPage(
+                            pageNumber
+                          );
+                        }}
+                      >
+                        {pageNumber}
+                      </button>
+                    )
+                  )}
+
+                  {visiblePageNumbers[
+                    visiblePageNumbers.length -
+                      1
+                  ] <
+                    totalPages && (
+                    <>
+                      {visiblePageNumbers[
+                        visiblePageNumbers.length -
+                          1
+                      ] <
+                        totalPages -
+                          1 && (
+                        <span className="pagination-ellipsis">
+                          …
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          goToPage(
+                            totalPages
+                          );
+                        }}
+                      >
+                        {totalPages}
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={
+                      currentPage ===
+                      totalPages
+                    }
+                    onClick={() => {
+                      goToPage(
+                        currentPage +
+                          1
+                      );
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* ==========================
