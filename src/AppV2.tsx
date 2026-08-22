@@ -9,7 +9,6 @@ import {
   UserRound,
   Menu,
   X,
-  Eye,
   MessageCircle,
   Play,
   ChevronRight,
