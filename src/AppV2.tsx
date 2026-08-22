@@ -1,5 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  type Session,
+} from "@supabase/supabase-js";
 
+import { supabase } from "./lib/supabase";
 import {
   Search,
   UserRound,
@@ -199,6 +203,7 @@ function RoffleLogo() {
     </a>
   );
 }
+
 
 function MediaStage({
   post,
@@ -455,6 +460,96 @@ function App() {
   const [filterOpen, setFilterOpen] =
     useState(false);
 
+  const [
+    session,
+    setSession,
+  ] = useState<Session | null>(
+    null
+  );
+
+  const [
+    authReady,
+    setAuthReady,
+  ] = useState(false);
+
+
+  useEffect(() => {
+    let mounted = true;
+
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!mounted) {
+          return;
+        }
+
+        setSession(
+          data.session
+        );
+
+        setAuthReady(true);
+      });
+
+    const {
+      data: {
+        subscription,
+      },
+    } =
+      supabase.auth.onAuthStateChange(
+        (_event, nextSession) => {
+          if (!mounted) {
+            return;
+          }
+
+          setSession(
+            nextSession
+          );
+
+          setAuthReady(true);
+        }
+      );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+
+  const signOut =
+    async () => {
+      await supabase.auth.signOut();
+
+      window.location.assign(
+        "/"
+      );
+    };
+
+
+  const provider =
+    session?.user.app_metadata
+      ?.provider;
+
+  const providerLabel =
+    provider === "google"
+      ? "Google"
+      : provider === "discord"
+        ? "Discord"
+        : provider
+          ? String(provider)
+          : "Account";
+
+  const userLabel =
+    session?.user.email ??
+    session?.user.user_metadata
+      ?.preferred_username ??
+    session?.user.user_metadata
+      ?.user_name ??
+    session?.user.user_metadata
+      ?.full_name ??
+    "Signed in";
+
+
   return (
     <div className="roffle-app">
       {/* ==================================================
@@ -494,20 +589,56 @@ function App() {
               <Search size={19} />
             </button>
 
-            <a
-              className="login-link"
-              href="#login"
-            >
-              Log in
-            </a>
+            {authReady &&
+              (session ? (
+                <>
+                  <div
+                    className="header-user"
+                    title={`${userLabel} via ${providerLabel}`}
+                  >
+                    <span className="header-user-icon">
+                      <UserRound size={16} />
+                    </span>
 
-            <a
-              className="join-button"
-              href="#signup"
-            >
-              <UserRound size={16} />
-              Join ROFFLE
-            </a>
+                    <span className="header-user-copy">
+                      <strong>
+                        {userLabel}
+                      </strong>
+
+                      <small>
+                        {providerLabel}
+                      </small>
+                    </span>
+                  </div>
+
+                  <button
+                    className="header-signout"
+                    type="button"
+                    onClick={() => {
+                      void signOut();
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a
+                    className="login-link"
+                    href="/"
+                  >
+                    Log in
+                  </a>
+
+                  <a
+                    className="join-button"
+                    href="/"
+                  >
+                    <UserRound size={16} />
+                    Join ROFFLE
+                  </a>
+                </>
+              ))}
 
             <button
               className="mobile-menu"
@@ -545,9 +676,33 @@ function App() {
               Members
             </a>
 
-            <a href="#login">
-              Log in
-            </a>
+            {authReady &&
+              (session ? (
+                <div className="mobile-auth">
+                  <div className="mobile-auth-copy">
+                    <strong>
+                      {userLabel}
+                    </strong>
+
+                    <small>
+                      Signed in with {providerLabel}
+                    </small>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void signOut();
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : (
+                <a href="/">
+                  Log in / Join
+                </a>
+              ))}
           </nav>
         )}
       </header>
@@ -958,7 +1113,7 @@ function App() {
             <RoffleLogo />
 
             <p>
-              wtf internet nonsense
+              wtf internet
             </p>
           </div>
 

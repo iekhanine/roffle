@@ -1,0 +1,11 @@
+# Environment secrets / per-owner configuration
+.env
+.env.local
+.env.*.local
+
+# Dependencies / builds
+node_modules/
+dist/
+
+# Supabase local state
+.supabase/

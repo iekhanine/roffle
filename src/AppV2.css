@@ -2326,3 +2326,164 @@ img {
   }
 
 }
+
+
+/* ==========================================================
+   HEADER AUTH SESSION
+   ========================================================== */
+
+.header-user {
+  max-width: 250px;
+  height: 42px;
+
+  padding: 0 11px 0 8px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 9px;
+
+  border:
+    1px solid rgba(255,255,255,0.11);
+
+  border-radius: 12px;
+
+  background:
+    rgba(255,255,255,0.055);
+
+  color: #fff;
+}
+
+.header-user-icon {
+  width: 28px;
+  height: 28px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 9px;
+
+  background: #fff;
+
+  color: #171717;
+}
+
+.header-user-copy {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 1px;
+}
+
+.header-user-copy strong {
+  max-width: 170px;
+
+  overflow: hidden;
+
+  color: #fff;
+
+  font-size: 11px;
+  font-weight: 750;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-user-copy small {
+  color: #9d9d98;
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.08em;
+
+  text-transform: uppercase;
+}
+
+.header-signout {
+  padding: 10px 4px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: #a9a9a5;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.header-signout:hover {
+  color: #fff;
+}
+
+.mobile-auth {
+  padding: 12px 4px 4px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  border-top:
+    1px solid rgba(255,255,255,0.08);
+}
+
+.mobile-auth-copy {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.mobile-auth-copy strong {
+  max-width: 230px;
+
+  overflow: hidden;
+
+  color: #fff;
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-auth-copy small {
+  color: #8f8f8b;
+
+  font-size: 10px;
+}
+
+.mobile-auth button {
+  flex: 0 0 auto;
+
+  padding: 8px 10px;
+
+  border:
+    1px solid rgba(255,255,255,0.12);
+
+  border-radius: 9px;
+
+  background:
+    rgba(255,255,255,0.06);
+
+  color: #eee;
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .header-user,
+  .header-signout {
+    display: none;
+  }
+}
