@@ -109,10 +109,12 @@ export default function QuickPostDialog({
     );
 
   const [
-    posted,
-    setPosted,
+    postedMessage,
+    setPostedMessage,
   ] =
-    useState(false);
+    useState<string | null>(
+      null
+    );
 
 
   const parsedYouTube =
@@ -208,7 +210,7 @@ export default function QuickPostDialog({
 
     setSaving(false);
     setError(null);
-    setPosted(false);
+    setPostedMessage(null);
   };
 
 
@@ -302,7 +304,12 @@ export default function QuickPostDialog({
             );
         }
 
-        setPosted(true);
+        setPostedMessage(
+          created.moderation_status ===
+            "approved"
+            ? "Posted."
+            : "Submitted for approval."
+        );
 
         onPosted(
           created
@@ -718,10 +725,10 @@ export default function QuickPostDialog({
             </div>
           )}
 
-          {posted && (
+          {postedMessage && (
             <div className="quick-post-success">
               <CheckCircle2 size={16} />
-              Posted.
+              {postedMessage}
             </div>
           )}
         </div>

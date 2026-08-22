@@ -34,6 +34,20 @@ export type PostRecord = {
 
   published: boolean;
 
+  moderation_status:
+    | "pending"
+    | "approved"
+    | "rejected";
+
+  submitted_at:
+    string | null;
+
+  moderated_at:
+    string | null;
+
+  moderation_note:
+    string | null;
+
   created_at: string;
   updated_at: string;
 

@@ -354,6 +354,10 @@ export async function createQuickPost(
         video_type,
         image_url,
         published,
+        moderation_status,
+        submitted_at,
+        moderated_at,
+        moderation_note,
         created_at,
         updated_at,
         profiles!posts_user_id_fkey (
@@ -386,7 +390,7 @@ export async function createQuickPost(
    ========================================================== */
 
 
-export async function getPublishedPosts() {
+export async function getFeedPosts() {
   const {
     data,
     error,
@@ -404,6 +408,10 @@ export async function getPublishedPosts() {
         video_type,
         image_url,
         published,
+        moderation_status,
+        submitted_at,
+        moderated_at,
+        moderation_note,
         created_at,
         updated_at,
         profiles!posts_user_id_fkey (
@@ -411,10 +419,6 @@ export async function getPublishedPosts() {
           avatar_url
         )
       `)
-      .eq(
-        "published",
-        true
-      )
       .order(
         "created_at",
         {

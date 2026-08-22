@@ -13,9 +13,18 @@ import {
 
 import { supabase } from "./lib/supabase";
 
+import PasswordAuthForm from "./components/auth/PasswordAuthForm";
+
 import "./AppV2.css";
 
 const AppV2 = lazy(() => import("./AppV2"));
+
+const Admin = lazy(
+  () =>
+    import(
+      "./pages/admin/Admin"
+    )
+);
 
 
 /* ==========================================================
@@ -568,13 +577,13 @@ function LoginPage() {
             Sign in to post weird stuff,
             questionable videos, and things
             you probably should have kept to
-            yourself, in your dimmented little brain.          </p>
+            yourself, in your demented little brain.          </p>
 
           <div className="roffle-auth-caption">
             <span />
 
             <span>
-              Lurking remains completely free. But we judge you. 
+              Lurking is an option. But we judge you. 
             </span>
           </div>
         </section>
@@ -652,6 +661,12 @@ function LoginPage() {
           </button>
 
           <div className="roffle-auth-divider">
+            or use email
+          </div>
+
+          <PasswordAuthForm />
+
+          <div className="roffle-auth-divider">
             or
           </div>
 
@@ -696,6 +711,23 @@ function App() {
     path === "/signin"
   ) {
     return <LoginPage />;
+  }
+
+  if (
+    path === "/admin" ||
+    path.startsWith(
+      "/admin/"
+    )
+  ) {
+    return (
+      <Suspense
+        fallback={
+          <PrototypeLoading />
+        }
+      >
+        <Admin />
+      </Suspense>
+    );
   }
 
   return (

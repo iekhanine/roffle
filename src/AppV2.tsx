@@ -27,8 +27,16 @@ import {
 import QuickPostDialog from "./components/posts/QuickPostDialog";
 
 import {
-  getPublishedPosts,
+  getFeedPosts,
 } from "./services/posts";
+
+import {
+  getMyAccess,
+} from "./services/admin";
+
+import type {
+  UserRole,
+} from "./types/admin";
 
 import type {
   PostRecord,
@@ -58,105 +66,13 @@ type Post = {
   youtubeId?: string;
   source?: string;
   tag?: string;
+
+  moderationStatus?:
+    | "pending"
+    | "approved"
+    | "rejected";
 };
 
-const demoPosts: Post[] = [
-  {
-    id: 80,
-    title: "Crabs",
-    author: "Tooterfish",
-    avatar: "T",
-    published: "Today, 1:42 AM",
-    views: 3,
-    comments: 0,
-    type: "short",
-    tag: "VIDEO",
-
-    // Replace this with the real YouTube Short ID.
-    youtubeId: "YOUR_SHORT_ID",
-
-    image:
-      "https://picsum.photos/seed/roffle-crabs/900/1600",
-  },
-
-  {
-    id: 78,
-    title: "This is Cinema",
-    author: "Tooterfish",
-    avatar: "T",
-    published: "Today, 1:34 AM",
-    views: 8,
-    comments: 0,
-    type: "short",
-    tag: "VIDEO",
-    youtubeId: "YOUR_SHORT_ID",
-    image:
-      "https://picsum.photos/seed/roffle-cinema/900/1600",
-  },
-
-  {
-    id: 72,
-    title: "I'll just go over here",
-    author: "Tooterfish",
-    avatar: "T",
-    published: "Today, 1:22 AM",
-    views: 1,
-    comments: 0,
-    type: "short",
-    tag: "VIDEO",
-    youtubeId: "YOUR_SHORT_ID",
-    image:
-      "https://picsum.photos/seed/roffle-over-there/900/1600",
-  },
-
-  {
-    id: 64,
-    title: "Cats",
-    author: "Tooterfish",
-    avatar: "T",
-    published: "Yesterday, 11:58 PM",
-    views: 24,
-    comments: 4,
-    type: "gallery",
-    tag: "PHOTOS",
-    description: "Videos coming soon....",
-    image:
-      "https://picsum.photos/seed/roffle-cats/1200/800",
-  },
-
-  {
-    id: 61,
-    title: "Weird",
-    author: "Tooterfish",
-    avatar: "T",
-    published: "Yesterday, 11:41 PM",
-    views: 19,
-    comments: 2,
-    type: "link",
-    tag: "LINK",
-    source: "youtube.com",
-    description:
-      "This dude's YouTube channel is nuts.",
-    image:
-      "https://picsum.photos/seed/roffle-weird/1200/700",
-  },
-
-  {
-    id: 52,
-    title: "Iceberg right ahead",
-    author: "Tooterfish",
-    avatar: "T",
-    published: "May 13, 2026",
-    views: 18,
-    comments: 1,
-    type: "link",
-    tag: "LINK",
-    source: "poststuff2.entensity.net",
-    description: "Check This Out!",
-    image:
-      "https://picsum.photos/seed/roffle-iceberg/1200/700",
-  },
-];
 
 const youtubeGems = [
   {
@@ -254,6 +170,9 @@ function mapPostRecord(
       tag:
         "VIDEO",
 
+      moderationStatus:
+        post.moderation_status,
+
       youtubeId:
         post.youtube_id ??
         undefined,
@@ -294,6 +213,9 @@ function mapPostRecord(
       tag:
         "IMAGE",
 
+      moderationStatus:
+        post.moderation_status,
+
       description:
         post.body ??
         undefined,
@@ -328,6 +250,9 @@ function mapPostRecord(
 
     tag:
       "TEXT",
+
+    moderationStatus:
+      post.moderation_status,
 
     description:
       post.body ??
@@ -507,9 +432,25 @@ function PostCard({
     >
       <header className="post-header">
         <div className="post-header-top">
-          <span className="content-badge">
-            {post.tag}
-          </span>
+          <div className="post-badge-group">
+            <span className="content-badge">
+              {post.tag}
+            </span>
+
+            {post.moderationStatus ===
+              "pending" && (
+              <span className="moderation-badge pending">
+                Pending approval
+              </span>
+            )}
+
+            {post.moderationStatus ===
+              "rejected" && (
+              <span className="moderation-badge rejected">
+                Rejected
+              </span>
+            )}
+          </div>
 
           <button
             className="post-menu"
@@ -659,6 +600,14 @@ function App() {
     setAuthReady,
   ] = useState(false);
 
+  const [
+    accessRole,
+    setAccessRole,
+  ] =
+    useState<UserRole | null>(
+      null
+    );
+
 
   useEffect(() => {
     let mounted = true;
@@ -706,7 +655,49 @@ function App() {
   useEffect(() => {
     let mounted = true;
 
-    void getPublishedPosts()
+    if (!session) {
+      setAccessRole(
+        null
+      );
+
+      return () => {
+        mounted = false;
+      };
+    }
+
+    void getMyAccess()
+      .then(
+        (
+          access
+        ) => {
+          if (!mounted) {
+            return;
+          }
+
+          setAccessRole(
+            access?.role ??
+            null
+          );
+        }
+      )
+      .catch(() => {
+        if (mounted) {
+          setAccessRole(
+            null
+          );
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [session]);
+
+
+  useEffect(() => {
+    let mounted = true;
+
+    void getFeedPosts()
       .then(
         (
           records
@@ -817,11 +808,16 @@ function App() {
     "Signed in";
 
 
-  const happeningPosts =
-    [
-      ...livePosts,
-      ...demoPosts,
-    ].slice(
+const happeningPosts =
+  livePosts
+    .filter(
+      (
+        post
+      ) =>
+        post.moderationStatus ===
+          "approved"
+    )
+    .slice(
       0,
       4
     );
@@ -898,6 +894,18 @@ function App() {
                       </small>
                     </span>
                   </div>
+
+                  {(accessRole ===
+                    "moderator" ||
+                    accessRole ===
+                      "admin") && (
+                    <a
+                      className="header-admin-link"
+                      href="/admin"
+                    >
+                      Admin
+                    </a>
+                  )}
 
                   <button
                     className="header-signout"
@@ -1200,15 +1208,12 @@ function App() {
               </span>
             </div>
 
-            {[
-              ...livePosts,
-              ...demoPosts,
-            ].map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-              />
-            ))}
+ {livePosts.map((post) => (
+  <PostCard
+    key={post.id}
+    post={post}
+  />
+))}
 
             <div className="pagination">
               <button disabled>
