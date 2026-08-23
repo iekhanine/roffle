@@ -4548,3 +4548,421 @@ img {
       );
   }
 }
+
+
+/* ==========================================================
+   HOMEPAGE 010
+   NATURAL MEDIA + EXPLICIT CARD WIDTHS
+
+   Media dimensions and card dimensions are separate:
+   images/GIFs keep their own aspect ratio,
+   Small/Large/Wide controls the card width.
+   ========================================================== */
+
+
+/* ==========================================================
+   010A - MAGAZINE WIDTH SYSTEM
+   ========================================================== */
+
+
+.magazine-grid,
+.front-page-pinned-grid {
+  grid-template-columns:
+    repeat(
+      12,
+      minmax(
+        0,
+        1fr
+      )
+    ) !important;
+
+  grid-auto-flow:
+    dense;
+
+  align-items:
+    start !important;
+}
+
+
+.magazine-grid
+.magazine-card-small,
+.front-page-pinned-grid
+.magazine-card-small {
+  grid-column:
+    span 4;
+}
+
+
+.magazine-grid
+.magazine-card-large,
+.front-page-pinned-grid
+.magazine-card-large {
+  grid-column:
+    span 6;
+}
+
+
+.magazine-grid
+.magazine-card-wide,
+.front-page-pinned-grid
+.magazine-card-wide {
+  grid-column:
+    1 / -1;
+}
+
+
+.magazine-grid .post-card,
+.front-page-pinned-grid .post-card {
+  height: auto !important;
+
+  display: block !important;
+}
+
+
+/* ==========================================================
+   010B - NATURAL IMAGE MEDIA
+   ========================================================== */
+
+
+.magazine-grid .post-media,
+.front-page-pinned-grid .post-media {
+  width: 100%;
+
+  height: auto !important;
+
+  aspect-ratio:
+    auto !important;
+
+  overflow: visible !important;
+
+  background:
+    transparent;
+}
+
+
+.magazine-grid
+.post-media >
+.photo-stage,
+.front-page-pinned-grid
+.post-media >
+.photo-stage {
+  width: 100% !important;
+
+  height: auto !important;
+  min-height: 0 !important;
+
+  aspect-ratio:
+    auto !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  background: #111;
+}
+
+
+.magazine-grid
+.photo-stage >
+img,
+.front-page-pinned-grid
+.photo-stage >
+img,
+.magazine-card-wide
+.photo-stage >
+img {
+  width: auto !important;
+  height: auto !important;
+
+  max-width: 100% !important;
+  max-height: none !important;
+
+  margin:
+    0 auto;
+
+  display: block;
+
+  object-fit:
+    contain !important;
+}
+
+
+/* ==========================================================
+   010C - NATURAL GIF ATTACHMENTS
+   ========================================================== */
+
+
+.magazine-grid
+.post-gif-attachment,
+.front-page-pinned-grid
+.post-gif-attachment {
+  width:
+    fit-content !important;
+
+  max-width:
+    calc(
+      100% - 36px
+    ) !important;
+}
+
+
+.magazine-grid
+.post-gif-attachment
+img,
+.front-page-pinned-grid
+.post-gif-attachment
+img {
+  width: auto !important;
+  height: auto !important;
+
+  max-width: 100% !important;
+  max-height: none !important;
+
+  object-fit:
+    contain !important;
+}
+
+
+/* ==========================================================
+   010D - YOUTUBE STAYS 16:9
+   ========================================================== */
+
+
+.magazine-grid
+.post-media >
+.video-stage,
+.front-page-pinned-grid
+.post-media >
+.video-stage {
+  width: 100% !important;
+  height: auto !important;
+
+  aspect-ratio:
+    16 / 9 !important;
+}
+
+
+.magazine-grid
+.video-stage
+iframe,
+.front-page-pinned-grid
+.video-stage
+iframe {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+
+/* Shorts remain portrait. */
+
+
+.magazine-grid
+.post-media >
+.short-stage,
+.front-page-pinned-grid
+.post-media >
+.short-stage {
+  height: auto !important;
+
+  min-height:
+    430px !important;
+
+  aspect-ratio:
+    auto !important;
+}
+
+
+/* ==========================================================
+   010E - TEXT POSTS
+   ========================================================== */
+
+
+.magazine-grid
+.post-media >
+.text-magazine-stage,
+.front-page-pinned-grid
+.post-media >
+.text-magazine-stage {
+  width: 100% !important;
+
+  height: auto !important;
+
+  min-height:
+    220px !important;
+
+  aspect-ratio:
+    auto !important;
+}
+
+
+.magazine-card-wide
+.text-magazine-stage {
+  min-height:
+    300px !important;
+}
+
+
+/* Let content determine card height again. */
+
+
+.magazine-grid
+.post-description,
+.front-page-pinned-grid
+.post-description {
+  display: block !important;
+
+  min-height: 0 !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  -webkit-line-clamp:
+    unset !important;
+}
+
+
+/* ==========================================================
+   010F - RESPONSIVE WIDTHS
+   ========================================================== */
+
+
+@media (
+  max-width: 980px
+) {
+  .magazine-grid
+  .magazine-card-small,
+  .front-page-pinned-grid
+  .magazine-card-small,
+  .magazine-grid
+  .magazine-card-large,
+  .front-page-pinned-grid
+  .magazine-card-large {
+    grid-column:
+      span 6;
+  }
+}
+
+
+@media (
+  max-width: 680px
+) {
+  .magazine-grid
+  .magazine-card-small,
+  .front-page-pinned-grid
+  .magazine-card-small,
+  .magazine-grid
+  .magazine-card-large,
+  .front-page-pinned-grid
+  .magazine-card-large,
+  .magazine-grid
+  .magazine-card-wide,
+  .front-page-pinned-grid
+  .magazine-card-wide {
+    grid-column:
+      1 / -1;
+  }
+
+  .magazine-grid
+  .post-gif-attachment,
+  .front-page-pinned-grid
+  .post-gif-attachment {
+    max-width:
+      calc(
+        100% - 24px
+      ) !important;
+  }
+}
+
+
+/* ==========================================================
+   HOMEPAGE 011
+   EQUAL CARD HEIGHTS PER ROW
+   Keeps media natural; only the OUTER card stretches.
+   ========================================================== */
+
+
+/* Grid items in the same row now share the tallest card height. */
+
+.magazine-grid,
+.front-page-pinned-grid {
+  align-items:
+    stretch !important;
+}
+
+
+/* The card itself stretches, not the media inside it. */
+
+.magazine-grid
+.post-card,
+.front-page-pinned-grid
+.post-card {
+  height:
+    100% !important;
+
+  display:
+    flex !important;
+
+  flex-direction:
+    column;
+}
+
+
+/* Keep the variable-height image/GIF/video exactly as-is. */
+
+.magazine-grid
+.post-media,
+.front-page-pinned-grid
+.post-media {
+  flex:
+    0 0 auto;
+}
+
+
+/* Push footer/actions to the bottom so both columns line up. */
+
+.magazine-grid
+.post-footer,
+.front-page-pinned-grid
+.post-footer {
+  margin-top:
+    auto;
+}
+
+
+/* If a post has body text between media and footer,
+   let that area absorb the remaining vertical space. */
+
+.magazine-grid
+.post-description,
+.front-page-pinned-grid
+.post-description {
+  flex:
+    0 0 auto;
+}
+
+
+/* Wide cards are single-row items, so there is nothing
+   to equalize against. They remain naturally sized. */
+
+.magazine-grid
+.magazine-card-wide,
+.front-page-pinned-grid
+.magazine-card-wide {
+  height:
+    auto !important;
+}
+
+
+@media (
+  max-width: 680px
+) {
+  .magazine-grid
+  .post-card,
+  .front-page-pinned-grid
+  .post-card {
+    height:
+      auto !important;
+  }
+}

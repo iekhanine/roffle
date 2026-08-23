@@ -611,6 +611,14 @@ async function attachProfiles(
         row.front_page_visible !==
         false,
 
+      display_size:
+        row.display_size ===
+          "small" ||
+        row.display_size ===
+          "wide"
+          ? row.display_size
+          : "large",
+
       profiles:
         profileMap.get(
           row.user_id
@@ -685,6 +693,9 @@ export async function createQuickPost(
 
       category_id:
         input.categoryId,
+
+      display_size:
+        input.displaySize,
 
       title:
         cleanOptionalText(
@@ -761,6 +772,9 @@ export async function createQuickPost(
       category_id:
         input.categoryId,
 
+      display_size:
+        input.displaySize,
+
       title,
 
       body,
@@ -818,6 +832,9 @@ export async function createQuickPost(
 
       category_id:
         input.categoryId,
+
+      display_size:
+        input.displaySize,
 
       title:
         cleanOptionalText(
@@ -1239,6 +1256,27 @@ export async function updatePost(
     }
 
     throw error;
+  }
+
+
+  const {
+    error:
+      displaySizeError,
+  } =
+    await supabase.rpc(
+      "set_post_display_size",
+      {
+        target_post:
+          input.postId,
+
+        new_display_size:
+          input.displaySize,
+      }
+    );
+
+
+  if (displaySizeError) {
+    throw displaySizeError;
   }
 
 

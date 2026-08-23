@@ -8,6 +8,11 @@ export type QuickPostType =
   | "text"
   | "image";
 
+export type PostDisplaySize =
+  | "small"
+  | "large"
+  | "wide";
+
 export type YouTubeVideoType =
   | "short"
   | "video";
@@ -87,6 +92,9 @@ export type PostRecord = {
   front_page_visible:
     boolean;
 
+  display_size:
+    PostDisplaySize;
+
   created_at: string;
   updated_at: string;
 
@@ -106,6 +114,9 @@ export type CreateYouTubePostInput = {
   categoryId: string;
   tagIds: string[];
 
+  displaySize:
+    PostDisplaySize;
+
   gif?: GifAttachment | null;
 };
 
@@ -116,6 +127,9 @@ export type CreateTextPostInput = {
 
   categoryId: string;
   tagIds: string[];
+
+  displaySize:
+    PostDisplaySize;
 
   gif?: GifAttachment | null;
 };
@@ -133,6 +147,9 @@ export type CreateImagePostInput = {
 
   categoryId: string;
   tagIds: string[];
+
+  displaySize:
+    PostDisplaySize;
 
   gif?: GifAttachment | null;
 };
@@ -167,6 +184,9 @@ export type EditPostInput = {
 
   categoryId: string;
   tagIds: string[];
+
+  displaySize:
+    PostDisplaySize;
 
   gif?:
     GifAttachment | null;

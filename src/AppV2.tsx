@@ -64,6 +64,7 @@ import type {
 } from "./types/blog";
 
 import type {
+  PostDisplaySize,
   PostRecord,
 } from "./types/post";
 
@@ -148,6 +149,9 @@ type Post = {
 
   frontPageVisible:
     boolean;
+
+  displaySize:
+    PostDisplaySize;
 };
 
 function formatPostDate(
@@ -278,6 +282,10 @@ function mapPostRecord(
         post.front_page_visible !==
         false,
 
+      displaySize:
+        post.display_size ??
+        "large",
+
       description:
         post.body ??
         undefined,
@@ -376,6 +384,10 @@ function mapPostRecord(
         post.front_page_visible !==
         false,
 
+      displaySize:
+        post.display_size ??
+        "large",
+
       description:
         post.body ??
         undefined,
@@ -464,6 +476,10 @@ function mapPostRecord(
     frontPageVisible:
       post.front_page_visible !==
       false,
+
+    displaySize:
+      post.display_size ??
+      "large",
 
     description:
       post.body ??
@@ -669,7 +685,6 @@ function PostCard({
   onToggleFrontPageVisibility,
   isStaff,
   isAdmin,
-  layoutIndex = 0,
   featured = false,
 }: {
   post: Post;
@@ -706,8 +721,6 @@ function PostCard({
 
   isAdmin: boolean;
 
-  layoutIndex?: number;
-
   featured?: boolean;
 }) {
   const [
@@ -740,12 +753,10 @@ function PostCard({
 
   return (
     <article
-      className={`post-card magazine-card ${
+      className={`post-card magazine-card magazine-card-${post.displaySize} ${
         featured
           ? "front-page-pinned-card"
-          : layoutIndex % 5 === 0
-            ? "magazine-card-wide"
-            : ""
+          : ""
       }`}
       id={`post-${post.id}`}
     >
@@ -980,12 +991,6 @@ function PostCard({
         <MediaStage post={post} />
       </div>
 
-      {post.description &&
-        post.type !== "link" && (
-          <div className="post-description">
-            {post.description}
-          </div>
-        )}
 
       {post.gifUrl && (
         <div className="post-gif-attachment">
@@ -2420,7 +2425,7 @@ function App() {
                   size={14}
                 />
 
-                HIGHLIGHTED POST
+                HIGHLIGHTED ARTICLE
               </span>
 
               <h1>
@@ -2443,31 +2448,6 @@ function App() {
                 />
               </a>
             </div>
-
-            {highlightedBlogPost.hero_image_url ? (
-              <div className="home-blog-highlight-image">
-                <img
-                  src={
-                    highlightedBlogPost.hero_image_url
-                  }
-                  alt=""
-                />
-              </div>
-            ) : (
-              <div className="home-blog-highlight-mark">
-                <BookOpen
-                  size={24}
-                />
-
-                <span>
-                  ROFFLE
-                </span>
-
-                <strong>
-                  THOTS
-                </strong>
-              </div>
-            )}
           </section>
         )}
 
@@ -2491,14 +2471,10 @@ function App() {
             <div className="front-page-pinned-grid">
               {pinnedFrontPagePosts.map(
                 (
-                  post,
-                  index
+                  post
                 ) => (
                   <PostCard
                     featured
-                    layoutIndex={
-                      index
-                    }
                     key={
                       post.id
                     }
@@ -2927,13 +2903,9 @@ function App() {
               <div className="magazine-grid">
                 {paginatedPosts.map(
                   (
-                    post,
-                    index
+                    post
                   ) => (
                     <PostCard
-                      layoutIndex={
-                        index
-                      }
                       key={
                         post.id
                       }

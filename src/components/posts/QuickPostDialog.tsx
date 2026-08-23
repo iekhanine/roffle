@@ -33,6 +33,7 @@ import type {
 } from "../../services/giphy";
 
 import type {
+  PostDisplaySize,
   PostRecord,
   QuickPostType,
 } from "../../types/post";
@@ -76,6 +77,14 @@ export default function QuickPostDialog({
   ] =
     useState<QuickPostType>(
       "youtube"
+    );
+
+  const [
+    displaySize,
+    setDisplaySize,
+  ] =
+    useState<PostDisplaySize>(
+      "large"
     );
 
   const [
@@ -490,6 +499,10 @@ export default function QuickPostDialog({
       "youtube"
     );
 
+    setDisplaySize(
+      "large"
+    );
+
     setTitle("");
     setYoutubeUrl("");
     setBody("");
@@ -652,6 +665,8 @@ export default function QuickPostDialog({
                 tagIds:
                   selectedTagIds,
 
+                displaySize,
+
                 gif:
                   selectedGif,
               }
@@ -675,6 +690,8 @@ export default function QuickPostDialog({
 
                 tagIds:
                   selectedTagIds,
+
+                displaySize,
 
                 gif:
                   selectedGif,
@@ -718,6 +735,8 @@ export default function QuickPostDialog({
 
                 tagIds:
                   selectedTagIds,
+
+                displaySize,
 
                 gif:
                   usingGifAsMain
@@ -1284,6 +1303,86 @@ export default function QuickPostDialog({
               </label>
             </>
           )}
+
+          <section className="quick-post-layout-section">
+            <div className="quick-post-section-heading">
+              <strong>
+                Post size
+              </strong>
+
+              <span>
+                Controls card width, not media size.
+              </span>
+            </div>
+
+            <div className="quick-post-layout-options">
+              {(
+                [
+                  {
+                    value:
+                      "small",
+                    label:
+                      "Small",
+                    description:
+                      "Compact box",
+                  },
+                  {
+                    value:
+                      "large",
+                    label:
+                      "Large",
+                    description:
+                      "Standard card",
+                  },
+                  {
+                    value:
+                      "wide",
+                    label:
+                      "Wide",
+                    description:
+                      "Full row",
+                  },
+                ] as Array<{
+                  value:
+                    PostDisplaySize;
+                  label:
+                    string;
+                  description:
+                    string;
+                }>
+              ).map(
+                (
+                  option
+                ) => (
+                  <button
+                    type="button"
+                    key={
+                      option.value
+                    }
+                    className={
+                      displaySize ===
+                        option.value
+                        ? "selected"
+                        : ""
+                    }
+                    onClick={() => {
+                      setDisplaySize(
+                        option.value
+                      );
+                    }}
+                  >
+                    <strong>
+                      {option.label}
+                    </strong>
+
+                    <span>
+                      {option.description}
+                    </span>
+                  </button>
+                )
+              )}
+            </div>
+          </section>
 
           <section className="quick-post-taxonomy-section">
             <div className="quick-post-section-heading">
