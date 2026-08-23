@@ -594,6 +594,19 @@ async function attachProfiles(
         row.moderation_note ??
         null,
 
+      front_page_pinned:
+        Boolean(
+          row.front_page_pinned
+        ),
+
+      front_page_pinned_at:
+        row.front_page_pinned_at ??
+        null,
+
+      front_page_pinned_by:
+        row.front_page_pinned_by ??
+        null,
+
       profiles:
         profileMap.get(
           row.user_id
@@ -1265,6 +1278,35 @@ export async function deletePost(
       {
         target_post:
           postId,
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
+
+/* ==========================================================
+   FRONT PAGE PIN
+   Admin only. Enforced by database RPC.
+   ========================================================== */
+
+
+export async function setFrontPagePin(
+  postId: string,
+  pinned: boolean,
+) {
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      "admin_set_front_page_pin",
+      {
+        target_post:
+          postId,
+
+        pinned,
       }
     );
 

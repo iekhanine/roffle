@@ -35,6 +35,14 @@ const Forum = lazy(
 );
 
 
+const Blog = lazy(
+  () =>
+    import(
+      "./pages/blog/Blog"
+    )
+);
+
+
 /* ==========================================================
    ROFFLE
    APP ENTRY / LOGIN
@@ -720,6 +728,24 @@ function App() {
   ) {
     return <LoginPage />;
   }
+
+  if (
+    path === "/blog" ||
+    path.startsWith(
+      "/blog/"
+    )
+  ) {
+    return (
+      <Suspense
+        fallback={
+          <PrototypeLoading />
+        }
+      >
+        <Blog />
+      </Suspense>
+    );
+  }
+
 
   if (
     path === "/forum" ||

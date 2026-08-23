@@ -10,6 +10,10 @@ import type {
   ForumThreadDetail,
 } from "../types/forum";
 
+import type {
+  GiphyGif,
+} from "./giphy";
+
 
 /* ==========================================================
    FORUM 001
@@ -458,7 +462,15 @@ export async function getLatestForumThreads(
   }
 
   const categories =
-    new Map(
+    new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        slug: string;
+        description: string | null;
+      }
+    >(
       (
         categoryRows ??
         []
@@ -467,7 +479,20 @@ export async function getLatestForumThreads(
           category
         ) => [
           category.id,
-          category,
+          {
+            id:
+              category.id,
+
+            name:
+              category.name,
+
+            slug:
+              category.slug,
+
+            description:
+              category.description ??
+              null,
+          },
         ]
       )
     );
@@ -747,6 +772,7 @@ export async function createForumThread(
 export async function createForumReply(
   threadId: string,
   body: string,
+  gif?: GiphyGif | null,
 ) {
   const {
     data,
@@ -759,7 +785,20 @@ export async function createForumReply(
           threadId,
 
         reply_body:
-          body.trim(),
+          body.trim() ||
+          null,
+
+        reply_gif_id:
+          gif?.id ??
+          null,
+
+        reply_gif_url:
+          gif?.url ??
+          null,
+
+        reply_gif_preview_url:
+          gif?.previewUrl ??
+          null,
       }
     );
 

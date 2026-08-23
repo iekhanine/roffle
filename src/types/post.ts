@@ -75,6 +75,15 @@ export type PostRecord = {
   moderation_note:
     string | null;
 
+  front_page_pinned:
+    boolean;
+
+  front_page_pinned_at:
+    string | null;
+
+  front_page_pinned_by:
+    string | null;
+
   created_at: string;
   updated_at: string;
 

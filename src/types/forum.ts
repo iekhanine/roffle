@@ -50,7 +50,10 @@ export type ForumReply = {
   id: string;
   thread_id: string;
   user_id: string;
-  body: string;
+  body: string | null;
+  gif_id: string | null;
+  gif_url: string | null;
+  gif_preview_url: string | null;
   created_at: string;
   updated_at: string;
   author?: ForumAuthor | null;

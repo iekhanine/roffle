@@ -3595,3 +3595,850 @@ img {
   font-size: 10px;
   font-weight: 800;
 }
+
+
+/* ==========================================================
+   HOMEPAGE 001
+   BLOG HIGHLIGHT
+   ========================================================== */
+
+
+.home-blog-highlight {
+  min-height: 260px;
+
+  margin-bottom: 24px;
+
+  padding: 28px;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(
+      0,
+      1.2fr
+    )
+    minmax(
+      250px,
+      0.8fr
+    );
+
+  align-items: center;
+
+  gap: 28px;
+
+  overflow: hidden;
+
+  border-radius: 22px;
+}
+
+
+.home-blog-highlight.highlight-orange {
+  background:
+    #ff5a1f;
+
+  color: #fff;
+}
+
+
+.home-blog-highlight.highlight-blue {
+  background:
+    #dff3ff;
+
+  color:
+    #123f58;
+}
+
+
+.home-blog-highlight-copy {
+  min-width: 0;
+}
+
+
+.home-blog-highlight-kicker {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 6px;
+
+  font-size: 9px;
+  font-weight: 950;
+
+  letter-spacing:
+    0.12em;
+}
+
+
+.home-blog-highlight h1 {
+  max-width: 700px;
+
+  margin:
+    12px 0 11px;
+
+  font-size:
+    clamp(
+      32px,
+      4.5vw,
+      56px
+    );
+
+  font-weight: 920;
+
+  line-height: 0.98;
+
+  letter-spacing:
+    -0.055em;
+}
+
+
+.home-blog-highlight p {
+  max-width: 650px;
+
+  margin:
+    0 0 18px;
+
+  font-size: 12px;
+  line-height: 1.6;
+
+  opacity: 0.86;
+}
+
+
+.home-blog-highlight a {
+  min-height: 35px;
+
+  padding:
+    0 12px;
+
+  display:
+    inline-flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  border-radius: 9px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.94
+    );
+
+  color: #171717;
+
+  font-size: 9px;
+  font-weight: 900;
+
+  text-decoration:
+    none;
+}
+
+
+.highlight-blue
+.home-blog-highlight-copy a {
+  background:
+    #153f57;
+
+  color: #fff;
+}
+
+
+.home-blog-highlight-image {
+  overflow: hidden;
+
+  border-radius: 16px;
+
+  box-shadow:
+    0 20px 45px
+    rgba(
+      0,
+      0,
+      0,
+      0.16
+    );
+}
+
+
+.home-blog-highlight-image img {
+  width: 100%;
+
+  aspect-ratio:
+    4 / 3;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+
+.home-blog-highlight-mark {
+  min-height: 190px;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.28
+    );
+
+  border-radius: 16px;
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.12
+    );
+
+  font-size: 38px;
+  font-weight: 950;
+
+  letter-spacing:
+    0.14em;
+}
+
+
+.highlight-blue
+.home-blog-highlight-mark {
+  border-color:
+    rgba(
+      18,
+      63,
+      88,
+      0.18
+    );
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.45
+    );
+}
+
+
+/* ==========================================================
+   HOMEPAGE 002
+   ADMIN-PINNED POSTS
+   ========================================================== */
+
+
+.front-page-pinned-section {
+  margin-bottom: 25px;
+}
+
+
+.front-page-pinned-section
+.section-label {
+  margin-bottom: 10px;
+}
+
+
+.front-page-pinned-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 16px;
+}
+
+
+.front-page-pinned-grid
+.post-card {
+  margin-bottom: 0;
+}
+
+
+.front-page-pin-badge {
+  min-height: 20px;
+
+  padding:
+    0 7px;
+
+  display: inline-flex;
+  align-items: center;
+
+  gap: 4px;
+
+  border-radius: 6px;
+
+  background:
+    #202020;
+
+  color: #fff;
+
+  font-size: 8px;
+  font-weight: 900;
+
+  letter-spacing:
+    0.04em;
+}
+
+
+.front-page-pinned-card {
+  border-color:
+    rgba(
+      255,
+      90,
+      31,
+      0.28
+    );
+
+  box-shadow:
+    0 10px 35px
+    rgba(
+      255,
+      90,
+      31,
+      0.08
+    );
+}
+
+
+/* ==========================================================
+   HOMEPAGE 003
+   MAGAZINE GRID
+   ========================================================== */
+
+
+.magazine-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(
+        0,
+        1fr
+      )
+    );
+
+  gap: 18px;
+
+  align-items: start;
+}
+
+
+.magazine-grid
+.post-card {
+  margin-bottom: 0;
+
+  border-radius: 17px;
+}
+
+
+.magazine-card-wide {
+  grid-column:
+    1 / -1;
+}
+
+
+.magazine-grid
+.post-header,
+.front-page-pinned-grid
+.post-header {
+  padding:
+    16px 17px
+    14px;
+}
+
+
+.magazine-grid
+.post-title,
+.front-page-pinned-grid
+.post-title {
+  margin-bottom: 10px;
+
+  font-size: 20px;
+}
+
+
+.magazine-card-wide
+.post-title {
+  font-size:
+    clamp(
+      25px,
+      3vw,
+      35px
+    );
+}
+
+
+.magazine-grid
+.post-meta-row,
+.front-page-pinned-grid
+.post-meta-row {
+  min-height: 28px;
+}
+
+
+.magazine-grid
+.avatar,
+.front-page-pinned-grid
+.avatar {
+  width: 27px;
+  height: 27px;
+
+  border-radius: 8px;
+
+  font-size: 10px;
+}
+
+
+.magazine-grid
+.author-inline,
+.front-page-pinned-grid
+.author-inline,
+.magazine-grid
+.author-inline a,
+.front-page-pinned-grid
+.author-inline a {
+  font-size: 9px;
+}
+
+
+.magazine-grid
+.post-metrics,
+.front-page-pinned-grid
+.post-metrics {
+  gap: 9px;
+
+  font-size: 9px;
+}
+
+
+.magazine-grid
+.post-description,
+.front-page-pinned-grid
+.post-description {
+  padding:
+    13px 16px;
+
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+
+.magazine-grid
+.post-footer,
+.front-page-pinned-grid
+.post-footer {
+  padding:
+    10px 14px;
+}
+
+
+.magazine-grid
+.video-stage,
+.front-page-pinned-grid
+.video-stage {
+  aspect-ratio:
+    16 / 9;
+}
+
+
+.magazine-grid
+.video-stage iframe,
+.front-page-pinned-grid
+.video-stage iframe {
+  width: 100%;
+  height: 100%;
+}
+
+
+.magazine-grid
+.photo-stage > img,
+.front-page-pinned-grid
+.photo-stage > img {
+  height: 260px;
+
+  object-fit: cover;
+}
+
+
+.magazine-card-wide
+.photo-stage > img {
+  height: 390px;
+}
+
+
+.magazine-grid
+.short-stage,
+.front-page-pinned-grid
+.short-stage {
+  min-height: 0;
+  height: 430px;
+
+  padding: 18px;
+}
+
+
+.magazine-card-wide
+.short-stage {
+  height: 530px;
+}
+
+
+.magazine-grid
+.short-frame,
+.front-page-pinned-grid
+.short-frame {
+  width:
+    min(
+      280px,
+      100%
+    );
+}
+
+
+.magazine-grid
+.post-gif-attachment img,
+.front-page-pinned-grid
+.post-gif-attachment img {
+  max-height: 320px;
+}
+
+
+/* ==========================================================
+   HOMEPAGE 004
+   TEXT POST MAGAZINE ART
+   ========================================================== */
+
+
+.text-magazine-stage {
+  position: relative;
+
+  min-height: 250px;
+
+  display: flex;
+  align-items: flex-end;
+
+  overflow: hidden;
+
+  background-position:
+    center;
+
+  background-size: cover;
+
+  color: #fff;
+}
+
+
+.magazine-card-wide
+.text-magazine-stage {
+  min-height: 350px;
+}
+
+
+.text-magazine-overlay {
+  position: absolute;
+
+  inset: 0;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(
+        0,
+        0,
+        0,
+        0.08
+      ),
+      rgba(
+        0,
+        0,
+        0,
+        0.82
+      )
+    );
+}
+
+
+.text-magazine-copy {
+  position: relative;
+  z-index: 1;
+
+  padding: 18px;
+}
+
+
+.text-magazine-copy span {
+  display: block;
+
+  margin-bottom: 7px;
+
+  color:
+    #ff8b60;
+
+  font-size: 8px;
+  font-weight: 950;
+
+  letter-spacing:
+    0.1em;
+}
+
+
+.text-magazine-copy strong {
+  display: block;
+
+  font-size: 22px;
+  font-weight: 900;
+
+  line-height: 1.04;
+
+  letter-spacing:
+    -0.035em;
+}
+
+
+.text-magazine-copy p {
+  display:
+    -webkit-box;
+
+  max-width: 650px;
+
+  margin:
+    8px 0 0;
+
+  overflow: hidden;
+
+  -webkit-box-orient:
+    vertical;
+
+  -webkit-line-clamp:
+    3;
+
+  font-size: 10px;
+  line-height: 1.5;
+
+  opacity: 0.86;
+}
+
+
+/* ==========================================================
+   HOMEPAGE 005
+   RESPONSIVE MAGAZINE
+   ========================================================== */
+
+
+@media (
+  max-width: 820px
+) {
+  .home-blog-highlight {
+    grid-template-columns:
+      1fr;
+  }
+
+  .home-blog-highlight-image,
+  .home-blog-highlight-mark {
+    max-width: 520px;
+  }
+
+  .front-page-pinned-grid {
+    grid-template-columns:
+      1fr;
+  }
+}
+
+
+@media (
+  max-width: 680px
+) {
+  .magazine-grid {
+    grid-template-columns:
+      1fr;
+  }
+
+  .magazine-card-wide {
+    grid-column: auto;
+  }
+
+  .magazine-grid
+  .photo-stage > img,
+  .magazine-card-wide
+  .photo-stage > img {
+    height: auto;
+    max-height: 440px;
+  }
+
+  .magazine-grid
+  .short-stage,
+  .magazine-card-wide
+  .short-stage {
+    height: 460px;
+  }
+
+  .home-blog-highlight {
+    padding: 21px;
+
+    border-radius: 17px;
+  }
+}
+
+
+/* ==========================================================
+   HOMEPAGE 007
+   TRUE UNIFORM MAGAZINE CARD HEIGHTS
+   Fixes the whole card, not only the image/text media.
+   ========================================================== */
+
+
+/* Cards in the same magazine row now stretch to the same height. */
+
+.magazine-grid {
+  align-items: stretch;
+}
+
+
+.magazine-grid .post-card,
+.front-page-pinned-grid .post-card {
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* ==========================================================
+   HOMEPAGE 008
+   ONE MEDIA FRAME FOR YOUTUBE / IMAGE / TEXT
+   ========================================================== */
+
+
+.magazine-grid .post-media,
+.front-page-pinned-grid .post-media {
+  position: relative;
+
+  width: 100%;
+
+  flex:
+    0 0 auto;
+
+  aspect-ratio:
+    16 / 9;
+
+  overflow: hidden;
+
+  background: #111;
+}
+
+
+/* Force every regular media renderer to fill that exact frame. */
+
+.magazine-grid .post-media > .video-stage,
+.magazine-grid .post-media > .photo-stage,
+.magazine-grid .post-media > .text-magazine-stage,
+.front-page-pinned-grid .post-media > .video-stage,
+.front-page-pinned-grid .post-media > .photo-stage,
+.front-page-pinned-grid .post-media > .text-magazine-stage {
+  position: relative;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  min-height: 0 !important;
+
+  aspect-ratio:
+    auto !important;
+}
+
+
+/* Image posts now physically occupy the same box as YouTube. */
+
+.magazine-grid .photo-stage > img,
+.front-page-pinned-grid .photo-stage > img,
+.magazine-card-wide .photo-stage > img {
+  width: 100% !important;
+  height: 100% !important;
+
+  max-height: none !important;
+
+  display: block;
+
+  object-fit: cover;
+}
+
+
+/* Text artwork also physically occupies the same box. */
+
+.magazine-grid .text-magazine-stage,
+.front-page-pinned-grid .text-magazine-stage,
+.magazine-card-wide .text-magazine-stage {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+
+/* ==========================================================
+   HOMEPAGE 009
+   NORMALIZE VARIABLE COPY HEIGHT
+   ========================================================== */
+
+
+.magazine-grid .post-description,
+.front-page-pinned-grid .post-description {
+  display:
+    -webkit-box;
+
+  min-height: 31px;
+  max-height: 31px;
+
+  overflow: hidden;
+
+  -webkit-box-orient:
+    vertical;
+
+  -webkit-line-clamp:
+    2;
+}
+
+
+.magazine-grid .text-magazine-copy p,
+.front-page-pinned-grid .text-magazine-copy p {
+  -webkit-line-clamp:
+    2;
+}
+
+
+/* Keep actions on one baseline at the bottom of each card. */
+
+.magazine-grid .post-footer,
+.front-page-pinned-grid .post-footer {
+  margin-top: auto;
+}
+
+
+/* GIF attachments remain intentional extra content.
+   They no longer affect the primary media-frame height. */
+
+
+@media (
+  max-width: 680px
+) {
+  .magazine-grid .post-card,
+  .front-page-pinned-grid .post-card {
+    height: auto;
+  }
+
+  .magazine-grid .post-media,
+  .front-page-pinned-grid .post-media {
+    aspect-ratio:
+      16 / 9;
+  }
+}

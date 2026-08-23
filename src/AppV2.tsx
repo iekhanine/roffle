@@ -5,10 +5,7 @@ import {
 
 import { supabase } from "./lib/supabase";
 import {
-  Search,
-  UserRound,
-  Menu,
-  X,
+  BookOpen,
   MessageCircle,
   Play,
   ChevronRight,
@@ -19,12 +16,15 @@ import {
   Hash,
   Image as ImageIcon,
   Video,
-  Plus,
   Heart,
   Pencil,
+  Pin,
   Trash2,
 } from "lucide-react";
 
+import SiteHeader, {
+  RoffleLogo,
+} from "./components/layout/SiteHeader";
 import QuickPostDialog from "./components/posts/QuickPostDialog";
 import EditPostDialog from "./components/posts/EditPostDialog";
 import PostComments from "./components/posts/PostComments";
@@ -32,6 +32,7 @@ import PostComments from "./components/posts/PostComments";
 import {
   deletePost,
   getFeedPosts,
+  setFrontPagePin,
 } from "./services/posts";
 
 import {
@@ -48,9 +49,17 @@ import {
   getActiveTaxonomy,
 } from "./services/taxonomy";
 
+import {
+  getHighlightedBlogPost,
+} from "./services/blog";
+
 import type {
   UserRole,
 } from "./types/admin";
+
+import type {
+  BlogPost,
+} from "./types/blog";
 
 import type {
   PostRecord,
@@ -128,6 +137,12 @@ type Post = {
     | "pending"
     | "approved"
     | "rejected";
+
+  frontPagePinned:
+    boolean;
+
+  frontPagePinnedAt:
+    string | null;
 };
 
 function formatPostDate(
@@ -245,6 +260,15 @@ function mapPostRecord(
       moderationStatus:
         post.moderation_status,
 
+      frontPagePinned:
+        Boolean(
+          post.front_page_pinned
+        ),
+
+      frontPagePinnedAt:
+        post.front_page_pinned_at ??
+        null,
+
       description:
         post.body ??
         undefined,
@@ -330,6 +354,15 @@ function mapPostRecord(
       moderationStatus:
         post.moderation_status,
 
+      frontPagePinned:
+        Boolean(
+          post.front_page_pinned
+        ),
+
+      frontPagePinnedAt:
+        post.front_page_pinned_at ??
+        null,
+
       description:
         post.body ??
         undefined,
@@ -406,6 +439,15 @@ function mapPostRecord(
     moderationStatus:
       post.moderation_status,
 
+    frontPagePinned:
+      Boolean(
+        post.front_page_pinned
+      ),
+
+    frontPagePinnedAt:
+      post.front_page_pinned_at ??
+      null,
+
     description:
       post.body ??
       undefined,
@@ -419,19 +461,6 @@ function mapPostRecord(
         post.id
       ),
   };
-}
-
-
-function RoffleLogo() {
-  return (
-    <a className="roffle-logo" href="#">
-      <span className="logo-mark">R</span>
-
-      <span className="logo-word">
-        ROFFLE
-      </span>
-    </a>
-  );
 }
 
 
@@ -573,6 +602,42 @@ function MediaStage({
     );
   }
 
+  if (
+    post.type ===
+    "text"
+  ) {
+    return (
+      <div
+        className="text-magazine-stage"
+        style={{
+          backgroundImage:
+            post.image
+              ? `url(${post.image})`
+              : undefined,
+        }}
+      >
+        <div className="text-magazine-overlay" />
+
+        <div className="text-magazine-copy">
+          <span>
+            TEXT POST
+          </span>
+
+          <strong>
+            {post.title}
+          </strong>
+
+          {post.description && (
+            <p>
+              {post.description}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+
   return null;
 }
 
@@ -583,7 +648,11 @@ function PostCard({
   onCommentCountChanged,
   onEdit,
   onDelete,
+  onToggleFrontPagePin,
   isStaff,
+  isAdmin,
+  layoutIndex = 0,
+  featured = false,
 }: {
   post: Post;
 
@@ -607,7 +676,17 @@ function PostCard({
     post: Post,
   ) => void;
 
+  onToggleFrontPagePin: (
+    post: Post,
+  ) => void;
+
   isStaff: boolean;
+
+  isAdmin: boolean;
+
+  layoutIndex?: number;
+
+  featured?: boolean;
 }) {
   const [
     commentsOpen,
@@ -639,7 +718,13 @@ function PostCard({
 
   return (
     <article
-      className="post-card"
+      className={`post-card magazine-card ${
+        featured
+          ? "front-page-pinned-card"
+          : layoutIndex % 5 === 0
+            ? "magazine-card-wide"
+            : ""
+      }`}
       id={`post-${post.id}`}
     >
       <header className="post-header">
@@ -648,6 +733,16 @@ function PostCard({
             <span className="content-badge">
               {post.tag}
             </span>
+
+            {post.frontPagePinned && (
+              <span className="front-page-pin-badge">
+                <Pin
+                  size={10}
+                />
+
+                Front page
+              </span>
+            )}
 
             {post.moderationStatus ===
               "pending" && (
@@ -665,7 +760,8 @@ function PostCard({
           </div>
 
           {(canEdit ||
-            canDelete) && (
+            canDelete ||
+            isAdmin) && (
             <div className="post-menu-wrap">
               <button
                 className="post-menu"
@@ -706,6 +802,31 @@ function PostCard({
                       />
 
                       Edit
+                    </button>
+                  )}
+
+                  {isAdmin &&
+                    post.moderationStatus ===
+                      "approved" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(
+                          false
+                        );
+
+                        onToggleFrontPagePin(
+                          post
+                        );
+                      }}
+                    >
+                      <Pin
+                        size={13}
+                      />
+
+                      {post.frontPagePinned
+                        ? "Unpin from front page"
+                        : "Pin to front page"}
                     </button>
                   )}
 
@@ -940,9 +1061,6 @@ function RailModule({
 }
 
 function App() {
-  const [mobileOpen, setMobileOpen] =
-    useState(false);
-
   const [filterOpen, setFilterOpen] =
     useState(false);
 
@@ -1021,6 +1139,14 @@ function App() {
     setLivePosts,
   ] =
     useState<Post[]>([]);
+
+  const [
+    highlightedBlogPost,
+    setHighlightedBlogPost,
+  ] =
+    useState<BlogPost | null>(
+      null
+    );
 
   const [
     youtubeGems,
@@ -1163,6 +1289,38 @@ function App() {
         ) => {
           console.warn(
             "ROFFLE FILTER TAXONOMY ERROR:",
+            error
+          );
+        }
+      );
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+
+  useEffect(() => {
+    let mounted = true;
+
+    void getHighlightedBlogPost()
+      .then(
+        (
+          post
+        ) => {
+          if (mounted) {
+            setHighlightedBlogPost(
+              post
+            );
+          }
+        }
+      )
+      .catch(
+        (
+          error
+        ) => {
+          console.warn(
+            "ROFFLE BLOG HIGHLIGHT ERROR:",
             error
           );
         }
@@ -1401,6 +1559,69 @@ function App() {
     };
 
 
+  const handleToggleFrontPagePin =
+    async (
+      post: Post,
+    ) => {
+      if (
+        accessRole !==
+        "admin"
+      ) {
+        return;
+      }
+
+      const nextPinned =
+        !post.frontPagePinned;
+
+      try {
+        await setFrontPagePin(
+          String(
+            post.id
+          ),
+          nextPinned
+        );
+
+        setLivePosts(
+          (
+            current
+          ) =>
+            current.map(
+              (
+                item
+              ) =>
+                item.id ===
+                  post.id
+                  ? {
+                      ...item,
+
+                      frontPagePinned:
+                        nextPinned,
+
+                      frontPagePinnedAt:
+                        nextPinned
+                          ? new Date().toISOString()
+                          : null,
+                    }
+                  : item
+            )
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "ROFFLE FRONT PAGE PIN ERROR:",
+          error
+        );
+
+        window.alert(
+          error instanceof Error
+            ? error.message
+            : "Could not update front page pin."
+        );
+      }
+    };
+
+
   const handleToggleLike =
     async (
       post: Post,
@@ -1504,28 +1725,6 @@ function App() {
     };
 
 
-  const provider =
-    session?.user.app_metadata
-      ?.provider;
-
-  const providerLabel =
-    provider === "google"
-      ? "Google"
-      : provider === "discord"
-        ? "Discord"
-        : provider
-          ? String(provider)
-          : "Account";
-
-  const userLabel =
-    session?.user.email ??
-    session?.user.user_metadata
-      ?.preferred_username ??
-    session?.user.user_metadata
-      ?.user_name ??
-    session?.user.user_metadata
-      ?.full_name ??
-    "Signed in";
 
 
   const filteredPosts =
@@ -1655,11 +1854,89 @@ function App() {
     );
 
 
+  const activeFilterCount =
+    (
+      timeFilter !==
+      "all"
+        ? 1
+        : 0
+    ) +
+    (
+      contentFilter !==
+      "all"
+        ? 1
+        : 0
+    ) +
+    (
+      categoryFilter !==
+      "all"
+        ? 1
+        : 0
+    ) +
+    (
+      tagFilter !==
+      "all"
+        ? 1
+        : 0
+    );
+
+
+  const pinnedFrontPagePosts =
+    useMemo(
+      () =>
+        livePosts
+          .filter(
+            (
+              post
+            ) =>
+              post.moderationStatus ===
+                "approved" &&
+              post.frontPagePinned
+          )
+          .sort(
+            (
+              left,
+              right
+            ) =>
+              new Date(
+                right.frontPagePinnedAt ??
+                right.createdAt
+              ).getTime() -
+              new Date(
+                left.frontPagePinnedAt ??
+                left.createdAt
+              ).getTime()
+          ),
+      [
+        livePosts,
+      ]
+    );
+
+
+  const magazineSourcePosts =
+    useMemo(
+      () =>
+        activeFilterCount ===
+          0
+          ? filteredPosts.filter(
+              (
+                post
+              ) =>
+                !post.frontPagePinned
+            )
+          : filteredPosts,
+      [
+        activeFilterCount,
+        filteredPosts,
+      ]
+    );
+
+
   const totalPages =
     Math.max(
       1,
       Math.ceil(
-        filteredPosts.length /
+        magazineSourcePosts.length /
           POSTS_PER_PAGE
       )
     );
@@ -1675,14 +1952,14 @@ function App() {
           ) *
           POSTS_PER_PAGE;
 
-        return filteredPosts.slice(
+        return magazineSourcePosts.slice(
           start,
           start +
             POSTS_PER_PAGE
         );
       },
       [
-        filteredPosts,
+        magazineSourcePosts,
         currentPage,
       ]
     );
@@ -1802,33 +2079,6 @@ function App() {
         0
       );
     };
-
-
-  const activeFilterCount =
-    (
-      timeFilter !==
-      "all"
-        ? 1
-        : 0
-    ) +
-    (
-      contentFilter !==
-      "all"
-        ? 1
-        : 0
-    ) +
-    (
-      categoryFilter !==
-      "all"
-        ? 1
-        : 0
-    ) +
-    (
-      tagFilter !==
-      "all"
-        ? 1
-        : 0
-    );
 
 
   const approvedRailPosts =
@@ -1998,214 +2248,28 @@ function App() {
     };
 
 
-  const happeningPosts =
-    livePosts
-      .filter(
-        (
-          post
-        ) =>
-          post.moderationStatus ===
-            "approved"
-      )
-      .slice(
-        0,
-        4
-      );
 
 
   return (
     <div className="roffle-app">
-      {/* ==================================================
-          HEADER
-          ================================================== */}
-
-      <header className="site-header">
-        <div className="header-shell">
-          <RoffleLogo />
-
-          <nav className="desktop-nav">
-            <a
-              className="nav-active"
-              href="/"
-            >
-              Home
-            </a>
-
-            <a href="/forum">
-              Forums
-            </a>
-          </nav>
-
-          <div className="header-actions">
-            <button
-              className="icon-button"
-              aria-label="Search"
-            >
-              <Search size={19} />
-            </button>
-
-            <button
-              className="quick-post-trigger"
-              type="button"
-              onClick={
-                openQuickPost
-              }
-            >
-              <Plus size={16} />
-              Post
-            </button>
-
-            {authReady &&
-              (session ? (
-                <>
-                  <div
-                    className="header-user"
-                    title={`${userLabel} via ${providerLabel}`}
-                  >
-                    <span className="header-user-icon">
-                      <UserRound size={16} />
-                    </span>
-
-                    <span className="header-user-copy">
-                      <strong>
-                        {userLabel}
-                      </strong>
-
-                      <small>
-                        {providerLabel}
-                      </small>
-                    </span>
-                  </div>
-
-                  {(accessRole ===
-                    "moderator" ||
-                    accessRole ===
-                      "admin") && (
-                    <a
-                      className="header-admin-link"
-                      href="/admin"
-                    >
-                      Admin
-                    </a>
-                  )}
-
-                  <button
-                    className="header-signout"
-                    type="button"
-                    onClick={() => {
-                      void signOut();
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <a
-                  className="login-link"
-                  href="/login"
-                >
-                  Sign in
-                </a>
-              ))}
-
-            <button
-              className="mobile-menu"
-              onClick={() =>
-                setMobileOpen(
-                  !mobileOpen
-                )
-              }
-              aria-label="Menu"
-            >
-              {mobileOpen ? (
-                <X size={22} />
-              ) : (
-                <Menu size={22} />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {mobileOpen && (
-          <nav className="mobile-nav">
-            <a href="/">
-              Home
-            </a>
-
-            <a href="/forum">
-              Forums
-            </a>
-
-            <button
-              className="mobile-post-trigger"
-              type="button"
-              onClick={() => {
-                setMobileOpen(
-                  false
-                );
-
-                openQuickPost();
-              }}
-            >
-              <Plus size={15} />
-              Post
-            </button>
-
-            {authReady &&
-              (session ? (
-                <div className="mobile-auth">
-                  <div className="mobile-auth-copy">
-                    <strong>
-                      {userLabel}
-                    </strong>
-
-                    <small>
-                      Signed in with {providerLabel}
-                    </small>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void signOut();
-                    }}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              ) : (
-                <a href="/login">
-                  Sign in
-                </a>
-              ))}
-          </nav>
-        )}
-      </header>
-
-      {/* ==================================================
-          ANNOUNCEMENT
-          ================================================== */}
-
-      <div className="announcement">
-        <div className="announcement-shell">
-          <span className="announcement-dot" />
-
-          <span>
-            New around here?
-          </span>
-
-          <strong>
-            Come lurk. Posting is optional.
-          </strong>
-
-{!session && (
-          <a href="/login">
-            Create an account
-            <ChevronRight size={15} />
-          </a>
-)}
-        </div>
-      </div>
+      <SiteHeader
+        session={
+          session
+        }
+        authReady={
+          authReady
+        }
+        accessRole={
+          accessRole
+        }
+        activeSection="home"
+        onPost={
+          openQuickPost
+        }
+        onSignOut={() => {
+          void signOut();
+        }}
+      />
 
       {/* ==================================================
           PAGE
@@ -2213,69 +2277,140 @@ function App() {
 
       <main className="page-shell">
         {/* ==================================================
-            FEATURED STRIP
+            BLOG HIGHLIGHT
             ================================================== */}
 
-        <section className="trend-section">
-          <div className="section-label">
-            <Flame size={16} />
+        {highlightedBlogPost && (
+          <section
+            className={`home-blog-highlight highlight-${highlightedBlogPost.accent_style}`}
+          >
+            <div className="home-blog-highlight-copy">
+              <span className="home-blog-highlight-kicker">
+                <BookOpen
+                  size={14}
+                />
 
-            Happening on ROFFLE
-          </div>
+                HIGHLIGHTED POST
+              </span>
 
-          <div className="trend-grid">
-            {happeningPosts.map(
-              (
-                item,
-                index
-              ) => (
-                <a
-                  className={`trend-card trend-${index} ${
-                    item.type === "text"
-                      ? "trend-text-card"
-                      : ""
-                  }`}
-                  href={`#post-${item.id}`}
-                  key={item.id}
-                >
-                  {item.image ? (
-                    <img
-                      src={item.image}
-                      alt=""
-                    />
-                  ) : item.type === "text" ? (
-                    <div className="trend-text-preview">
-                      <span>
-                        ROFFLE
-                      </span>
+              <h1>
+                {highlightedBlogPost.title}
+              </h1>
 
-                      <p>
-                        {item.title}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="trend-media-placeholder">
-                      <Video size={28} />
-                    </div>
-                  )}
+              {highlightedBlogPost.excerpt && (
+                <p>
+                  {highlightedBlogPost.excerpt}
+                </p>
+              )}
 
-                  <div className="trend-overlay" />
+              <a
+                href={`/blog/${highlightedBlogPost.slug}`}
+              >
+                Read the blog post
 
-                  <div className="trend-copy">
-                    <span>
-                      {item.tag ??
-                        item.type}
-                    </span>
+                <ChevronRight
+                  size={15}
+                />
+              </a>
+            </div>
 
-                    <strong>
-                      {item.title}
-                    </strong>
-                  </div>
-                </a>
-              )
+            {highlightedBlogPost.hero_image_url ? (
+              <div className="home-blog-highlight-image">
+                <img
+                  src={
+                    highlightedBlogPost.hero_image_url
+                  }
+                  alt=""
+                />
+              </div>
+            ) : (
+              <div className="home-blog-highlight-mark">
+                BLOG
+              </div>
             )}
-          </div>
-        </section>
+          </section>
+        )}
+
+        {/* ==================================================
+            ADMIN-PINNED FRONT PAGE POSTS
+            ================================================== */}
+
+        {activeFilterCount ===
+          0 &&
+          pinnedFrontPagePosts.length >
+            0 && (
+          <section className="front-page-pinned-section">
+            <div className="section-label">
+              <Pin
+                size={15}
+              />
+
+              Pinned to the front page
+            </div>
+
+            <div className="front-page-pinned-grid">
+              {pinnedFrontPagePosts.map(
+                (
+                  post,
+                  index
+                ) => (
+                  <PostCard
+                    featured
+                    layoutIndex={
+                      index
+                    }
+                    key={
+                      post.id
+                    }
+                    post={
+                      post
+                    }
+                    session={
+                      session
+                    }
+                    onToggleLike={
+                      handleToggleLike
+                    }
+                    onCommentCountChanged={
+                      handleCommentCountChanged
+                    }
+                    onEdit={
+                      (
+                        selected
+                      ) => {
+                        setEditingPost(
+                          selected.sourceRecord
+                        );
+                      }
+                    }
+                    onDelete={
+                      (
+                        selected
+                      ) => {
+                        void handleDeletePost(
+                          selected
+                        );
+                      }
+                    }
+                    onToggleFrontPagePin={
+                      handleToggleFrontPagePin
+                    }
+                    isStaff={
+                      accessRole ===
+                        "moderator" ||
+                      accessRole ===
+                        "admin"
+                    }
+                    isAdmin={
+                      accessRole ===
+                        "admin"
+                    }
+                  />
+                )
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ==================================================
             TABS + FILTER
@@ -2284,7 +2419,7 @@ function App() {
         <div className="feed-controls">
           <div className="feed-tabs">
             <button className="feed-tab active">
-              Articles
+              Magazine
             </button>
 
             <button className="feed-tab">
@@ -2612,21 +2747,25 @@ function App() {
               </div>
 
               <span>
-                {filteredPosts.length} shown
+                {magazineSourcePosts.length} posts
                 {" · "}
                 Latest first
               </span>
             </div>
 
-            {filteredPosts.length ===
+            {magazineSourcePosts.length ===
               0 ? (
               <div className="feed-empty-filter">
                 <strong>
-                  Nothing matches that.
+                  {activeFilterCount > 0
+                    ? "Nothing matches that."
+                    : "No more posts yet."}
                 </strong>
 
                 <span>
-                  ROFFLE looked. The nonsense is elsewhere.
+                  {activeFilterCount > 0
+                    ? "ROFFLE looked. The nonsense is elsewhere."
+                    : "The pinned stuff is above. More nonsense will arrive eventually."}
                 </span>
 
                 {activeFilterCount >
@@ -2642,56 +2781,69 @@ function App() {
                 )}
               </div>
             ) : (
-              paginatedPosts.map(
-                (
-                  post
-                ) => (
-                  <PostCard
-                    key={
-                      post.id
-                    }
-                    post={
-                      post
-                    }
-                    session={
-                      session
-                    }
-                    onToggleLike={
-                      handleToggleLike
-                    }
-                    onCommentCountChanged={
-                      handleCommentCountChanged
-                    }
-                    onEdit={
-                      (
-                        selected
-                      ) => {
-                        setEditingPost(
-                          selected.sourceRecord
-                        );
+              <div className="magazine-grid">
+                {paginatedPosts.map(
+                  (
+                    post,
+                    index
+                  ) => (
+                    <PostCard
+                      layoutIndex={
+                        index
                       }
-                    }
-                    onDelete={
-                      (
-                        selected
-                      ) => {
-                        void handleDeletePost(
+                      key={
+                        post.id
+                      }
+                      post={
+                        post
+                      }
+                      session={
+                        session
+                      }
+                      onToggleLike={
+                        handleToggleLike
+                      }
+                      onCommentCountChanged={
+                        handleCommentCountChanged
+                      }
+                      onEdit={
+                        (
                           selected
-                        );
+                        ) => {
+                          setEditingPost(
+                            selected.sourceRecord
+                          );
+                        }
                       }
-                    }
-                    isStaff={
-                      accessRole ===
-                        "moderator" ||
-                      accessRole ===
-                        "admin"
-                    }
-                  />
-                )
-              )
+                      onDelete={
+                        (
+                          selected
+                        ) => {
+                          void handleDeletePost(
+                            selected
+                          );
+                        }
+                      }
+                      onToggleFrontPagePin={
+                        handleToggleFrontPagePin
+                      }
+                      isStaff={
+                        accessRole ===
+                          "moderator" ||
+                        accessRole ===
+                          "admin"
+                      }
+                      isAdmin={
+                        accessRole ===
+                          "admin"
+                      }
+                    />
+                  )
+                )}
+              </div>
             )}
 
-            {filteredPosts.length >
+            {magazineSourcePosts.length >
               0 && (
               <div className="pagination-wrap">
                 <div className="pagination-summary">
@@ -2708,10 +2860,10 @@ function App() {
                   {Math.min(
                     currentPage *
                       POSTS_PER_PAGE,
-                    filteredPosts.length
+                    magazineSourcePosts.length
                   )}{" "}
                   of{" "}
-                  {filteredPosts.length}
+                  {magazineSourcePosts.length}
                 </div>
 
                 <div className="pagination">
@@ -3216,16 +3368,16 @@ function App() {
                 ROFFLE
               </strong>
 
-              <a href="#home">
+              <a href="/">
                 Home
               </a>
 
-              <a href="#forums">
-                Forums
+              <a href="/blog">
+                Blog
               </a>
 
-              <a href="#latest">
-                Latest
+              <a href="/forum">
+                Forums
               </a>
             </div>
 
@@ -3238,7 +3390,7 @@ function App() {
                 Sign in
               </a>
 
-              <a href="#register">
+              <a href="/login">
                 Register
               </a>
 

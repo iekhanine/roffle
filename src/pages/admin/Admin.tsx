@@ -6,6 +6,7 @@ import {
 import {
   ArchiveX,
   ArrowLeft,
+  BookOpen,
   FileClock,
   ShieldCheck,
   Tag,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 import AdminUsers from "../../components/admin/AdminUsers";
+import BlogManager from "../../components/admin/BlogManager";
 import FlaggedComments from "../../components/admin/FlaggedComments";
 import ModerationQueue from "../../components/admin/ModerationQueue";
 import RejectedPosts from "../../components/admin/RejectedPosts";
@@ -42,6 +44,7 @@ type Tab =
   | "moderation"
   | "rejected"
   | "taxonomy"
+  | "blog"
   | "users";
 
 
@@ -346,6 +349,29 @@ export default function Admin() {
             <button
               className={
                 tab ===
+                  "blog"
+                  ? "active"
+                  : ""
+              }
+              onClick={() => {
+                setTab(
+                  "blog"
+                );
+              }}
+            >
+              <BookOpen
+                size={16}
+              />
+
+              Blog
+            </button>
+          )}
+
+          {access.role ===
+            "admin" && (
+            <button
+              className={
+                tab ===
                   "users"
                   ? "active"
                   : ""
@@ -470,6 +496,13 @@ export default function Admin() {
           {tab ===
             "taxonomy" && (
             <TaxonomyManager />
+          )}
+
+          {tab ===
+            "blog" &&
+            access.role ===
+              "admin" && (
+            <BlogManager />
           )}
 
           {tab ===

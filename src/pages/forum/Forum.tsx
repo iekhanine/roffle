@@ -13,7 +13,7 @@ import {
   Clock3,
   Eye,
   FolderOpen,
-  Home,
+  Image as ImageIcon,
   Lock,
   MessageCircle,
   MessageSquare,
@@ -21,12 +21,19 @@ import {
   Plus,
   Send,
   Trash2,
-  UserRound,
 } from "lucide-react";
 
 import {
   supabase,
 } from "../../lib/supabase";
+
+import SiteHeader from "../../components/layout/SiteHeader";
+import GiphyPicker from "../../components/posts/GiphyPicker";
+import QuickPostDialog from "../../components/posts/QuickPostDialog";
+
+import type {
+  GiphyGif,
+} from "../../services/giphy";
 
 import {
   getMyAccess,
@@ -123,79 +130,8 @@ function AuthorAvatar({
 
 /* ==========================================================
    FORUM 002
-   SHARED HEADER
+   BREADCRUMBS
    ========================================================== */
-
-
-function ForumHeader({
-  session,
-}: {
-  session:
-    Session | null;
-}) {
-  return (
-    <header className="forum-topbar">
-      <div className="forum-topbar-inner">
-        <a
-          className="forum-brand"
-          href="/forum"
-        >
-          <span>
-            R
-          </span>
-
-          <strong>
-            ROFFLE
-          </strong>
-
-          <small>
-            FORUM
-          </small>
-        </a>
-
-        <nav className="forum-topnav">
-          <a href="/">
-            <Home
-              size={14}
-            />
-
-            Home
-          </a>
-
-          <a
-            className="active"
-            href="/forum"
-          >
-            <MessageSquare
-              size={14}
-            />
-
-            Forums
-          </a>
-        </nav>
-
-        <div className="forum-account">
-          {session ? (
-            <>
-              <UserRound
-                size={14}
-              />
-
-              <span>
-                {session.user.email ??
-                  "Signed in"}
-              </span>
-            </>
-          ) : (
-            <a href="/login">
-              Create account
-            </a>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
 
 
 function ForumBreadcrumbs({
@@ -1300,6 +1236,7 @@ function NewThreadPage({
 
 function ForumPost({
   body,
+  gifUrl,
   authorName,
   createdAt,
   roleLabel,
@@ -1307,7 +1244,8 @@ function ForumPost({
   onDelete,
   original,
 }: {
-  body: string;
+  body: string | null;
+  gifUrl?: string | null;
   authorName: string;
   createdAt: string;
   roleLabel?: string;
@@ -1366,9 +1304,27 @@ function ForumPost({
           )}
         </header>
 
-        <div className="forum-post-body">
-          {body}
-        </div>
+        {body && (
+          <div className="forum-post-body">
+            {body}
+          </div>
+        )}
+
+        {gifUrl && (
+          <div className="forum-post-gif">
+            <img
+              src={
+                gifUrl
+              }
+              alt="Forum reaction GIF"
+              loading="lazy"
+            />
+
+            <span>
+              Powered by GIPHY
+            </span>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -1409,6 +1365,20 @@ function ThreadPage({
     setReplyBody,
   ] =
     useState("");
+
+  const [
+    selectedReplyGif,
+    setSelectedReplyGif,
+  ] =
+    useState<GiphyGif | null>(
+      null
+    );
+
+  const [
+    giphyOpen,
+    setGiphyOpen,
+  ] =
+    useState(false);
 
   const [
     loading,
@@ -1555,7 +1525,10 @@ function ThreadPage({
     async () => {
       if (
         !canReply ||
-        !replyBody.trim() ||
+        (
+          !replyBody.trim() &&
+          !selectedReplyGif
+        ) ||
         replyBody.trim().length >
           5000
       ) {
@@ -1573,10 +1546,19 @@ function ThreadPage({
       try {
         await createForumReply(
           thread.id,
-          replyBody
+          replyBody,
+          selectedReplyGif
         );
 
         setReplyBody("");
+
+        setSelectedReplyGif(
+          null
+        );
+
+        setGiphyOpen(
+          false
+        );
 
         await load();
       } catch (
@@ -1867,6 +1849,9 @@ function ThreadPage({
                 body={
                   reply.body
                 }
+                gifUrl={
+                  reply.gif_url
+                }
                 authorName={
                   authorLabel(
                     reply
@@ -1956,6 +1941,76 @@ function ThreadPage({
               placeholder="Add to the damage..."
             />
 
+            <div className="forum-reply-tools">
+              <button
+                className={
+                  giphyOpen
+                    ? "active"
+                    : ""
+                }
+                type="button"
+                onClick={() => {
+                  setGiphyOpen(
+                    (
+                      current
+                    ) =>
+                      !current
+                  );
+                }}
+              >
+                <ImageIcon
+                  size={13}
+                />
+
+                GIPHY
+              </button>
+
+              {selectedReplyGif && (
+                <div className="forum-selected-gif">
+                  <img
+                    src={
+                      selectedReplyGif.previewUrl
+                    }
+                    alt="Selected GIF"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedReplyGif(
+                        null
+                      );
+                    }}
+                  >
+                    Remove GIF
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {giphyOpen && (
+              <div className="forum-giphy-picker">
+                <GiphyPicker
+                  selected={
+                    selectedReplyGif
+                  }
+                  onSelect={
+                    (
+                      gif
+                    ) => {
+                      setSelectedReplyGif(
+                        gif
+                      );
+
+                      setGiphyOpen(
+                        false
+                      );
+                    }
+                  }
+                />
+              </div>
+            )}
+
             <footer>
               <span>
                 {replyBody.length}/5000
@@ -1966,7 +2021,10 @@ function ThreadPage({
                 type="button"
                 disabled={
                   saving ||
-                  !replyBody.trim()
+                  (
+                    !replyBody.trim() &&
+                    !selectedReplyGif
+                  )
                 }
                 onClick={() => {
                   void submitReply();
@@ -1996,6 +2054,12 @@ function ThreadPage({
 
 
 export default function Forum() {
+  const [
+    postDialogOpen,
+    setPostDialogOpen,
+  ] =
+    useState(false);
+
   const [
     session,
     setSession,
@@ -2124,13 +2188,53 @@ export default function Forum() {
   ]);
 
 
+  const signOut =
+    async () => {
+      await supabase.auth
+        .signOut();
+
+      window.location.assign(
+        "/"
+      );
+    };
+
+
+  const openQuickPost =
+    () => {
+      if (!session) {
+        window.location.assign(
+          "/login"
+        );
+
+        return;
+      }
+
+      setPostDialogOpen(
+        true
+      );
+    };
+
+
   if (!authReady) {
     return (
       <div className="forum-page">
-        <ForumHeader
+        <SiteHeader
           session={
             null
           }
+          authReady={
+            false
+          }
+          accessRole={
+            null
+          }
+          activeSection="forums"
+          onPost={
+            openQuickPost
+          }
+          onSignOut={() => {
+            void signOut();
+          }}
         />
 
         <main className="forum-shell">
@@ -2218,15 +2322,44 @@ export default function Forum() {
 
   return (
     <div className="forum-page">
-      <ForumHeader
+      <SiteHeader
         session={
           session
         }
+        authReady={
+          authReady
+        }
+        accessRole={
+          accessRole
+        }
+        activeSection="forums"
+        onPost={
+          openQuickPost
+        }
+        onSignOut={() => {
+          void signOut();
+        }}
       />
 
       <main className="forum-shell">
         {content}
       </main>
+
+      <QuickPostDialog
+        open={
+          postDialogOpen
+        }
+        onClose={() => {
+          setPostDialogOpen(
+            false
+          );
+        }}
+        onPosted={() => {
+          setPostDialogOpen(
+            false
+          );
+        }}
+      />
 
       <footer className="forum-footer">
         <div>
