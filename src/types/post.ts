@@ -84,6 +84,9 @@ export type PostRecord = {
   front_page_pinned_by:
     string | null;
 
+  front_page_visible:
+    boolean;
+
   created_at: string;
   updated_at: string;
 

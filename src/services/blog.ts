@@ -28,12 +28,9 @@ export async function getHighlightedBlogPost() {
         "published",
         true
       )
-      .order(
+      .eq(
         "is_highlighted",
-        {
-          ascending:
-            false,
-        }
+        true
       )
       .order(
         "published_at",

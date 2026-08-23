@@ -607,6 +607,10 @@ async function attachProfiles(
         row.front_page_pinned_by ??
         null,
 
+      front_page_visible:
+        row.front_page_visible !==
+        false,
+
       profiles:
         profileMap.get(
           row.user_id
@@ -1307,6 +1311,36 @@ export async function setFrontPagePin(
           postId,
 
         pinned,
+      }
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
+
+
+/* ==========================================================
+   FRONT PAGE VISIBILITY
+   Admin only. Enforced by database RPC.
+   ========================================================== */
+
+
+export async function setFrontPageVisibility(
+  postId: string,
+  visible: boolean,
+) {
+  const {
+    error,
+  } =
+    await supabase.rpc(
+      "admin_set_front_page_visibility",
+      {
+        target_post:
+          postId,
+
+        visible,
       }
     );
 

@@ -4442,3 +4442,109 @@ img {
       16 / 9;
   }
 }
+
+
+/* ==========================================================
+   BLOG HIGHLIGHT 004
+   QUIET EDITORIAL MARK
+   Replaces the oversized BLOG block when no hero image exists.
+   ========================================================== */
+
+
+.home-blog-highlight-mark {
+  min-height: 150px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  gap: 5px;
+
+  border-left:
+    1px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.18
+    );
+
+  color:
+    rgba(
+      255,
+      255,
+      255,
+      0.78
+    );
+
+  font-size: inherit;
+  font-weight: inherit;
+
+  letter-spacing: normal;
+}
+
+
+.home-blog-highlight-mark svg {
+  margin-bottom: 4px;
+
+  opacity: 0.72;
+}
+
+
+.home-blog-highlight-mark span {
+  font-size: 9px;
+  font-weight: 850;
+
+  letter-spacing:
+    0.18em;
+}
+
+
+.home-blog-highlight-mark strong {
+  font-size: 17px;
+  font-weight: 950;
+
+  letter-spacing:
+    0.04em;
+}
+
+
+.highlight-blue
+.home-blog-highlight-mark {
+  border-left-color:
+    rgba(
+      25,
+      55,
+      85,
+      0.14
+    );
+
+  color:
+    rgba(
+      20,
+      52,
+      78,
+      0.68
+    );
+}
+
+
+@media (
+  max-width: 720px
+) {
+  .home-blog-highlight-mark {
+    min-height: 88px;
+
+    border-left: 0;
+
+    border-top:
+      1px solid
+      rgba(
+        255,
+        255,
+        255,
+        0.18
+      );
+  }
+}

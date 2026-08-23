@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Clock,
   ExternalLink,
+  EyeOff,
   Flame,
   Hash,
   Image as ImageIcon,
@@ -33,6 +34,7 @@ import {
   deletePost,
   getFeedPosts,
   setFrontPagePin,
+  setFrontPageVisibility,
 } from "./services/posts";
 
 import {
@@ -143,6 +145,9 @@ type Post = {
 
   frontPagePinnedAt:
     string | null;
+
+  frontPageVisible:
+    boolean;
 };
 
 function formatPostDate(
@@ -269,6 +274,10 @@ function mapPostRecord(
         post.front_page_pinned_at ??
         null,
 
+      frontPageVisible:
+        post.front_page_visible !==
+        false,
+
       description:
         post.body ??
         undefined,
@@ -363,6 +372,10 @@ function mapPostRecord(
         post.front_page_pinned_at ??
         null,
 
+      frontPageVisible:
+        post.front_page_visible !==
+        false,
+
       description:
         post.body ??
         undefined,
@@ -447,6 +460,10 @@ function mapPostRecord(
     frontPagePinnedAt:
       post.front_page_pinned_at ??
       null,
+
+    frontPageVisible:
+      post.front_page_visible !==
+      false,
 
     description:
       post.body ??
@@ -649,6 +666,7 @@ function PostCard({
   onEdit,
   onDelete,
   onToggleFrontPagePin,
+  onToggleFrontPageVisibility,
   isStaff,
   isAdmin,
   layoutIndex = 0,
@@ -677,6 +695,10 @@ function PostCard({
   ) => void;
 
   onToggleFrontPagePin: (
+    post: Post,
+  ) => void;
+
+  onToggleFrontPageVisibility: (
     post: Post,
   ) => void;
 
@@ -744,6 +766,17 @@ function PostCard({
               </span>
             )}
 
+            {isAdmin &&
+              !post.frontPageVisible && (
+              <span className="front-page-pin-badge">
+                <EyeOff
+                  size={10}
+                />
+
+                Front page hidden
+              </span>
+            )}
+
             {post.moderationStatus ===
               "pending" && (
               <span className="moderation-badge pending">
@@ -808,6 +841,32 @@ function PostCard({
                   {isAdmin &&
                     post.moderationStatus ===
                       "approved" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(
+                          false
+                        );
+
+                        onToggleFrontPageVisibility(
+                          post
+                        );
+                      }}
+                    >
+                      <EyeOff
+                        size={13}
+                      />
+
+                      {post.frontPageVisible
+                        ? "Hide from front page"
+                        : "Show on front page"}
+                    </button>
+                  )}
+
+                  {isAdmin &&
+                    post.moderationStatus ===
+                      "approved" &&
+                    post.frontPageVisible && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1622,6 +1681,74 @@ function App() {
     };
 
 
+  const handleToggleFrontPageVisibility =
+    async (
+      post: Post,
+    ) => {
+      if (
+        accessRole !==
+        "admin"
+      ) {
+        return;
+      }
+
+      const nextVisible =
+        !post.frontPageVisible;
+
+      try {
+        await setFrontPageVisibility(
+          String(
+            post.id
+          ),
+          nextVisible
+        );
+
+        setLivePosts(
+          (
+            current
+          ) =>
+            current.map(
+              (
+                item
+              ) =>
+                item.id ===
+                  post.id
+                  ? {
+                      ...item,
+
+                      frontPageVisible:
+                        nextVisible,
+
+                      frontPagePinned:
+                        nextVisible
+                          ? item.frontPagePinned
+                          : false,
+
+                      frontPagePinnedAt:
+                        nextVisible
+                          ? item.frontPagePinnedAt
+                          : null,
+                    }
+                  : item
+            )
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "ROFFLE FRONT PAGE VISIBILITY ERROR:",
+          error
+        );
+
+        window.alert(
+          error instanceof Error
+            ? error.message
+            : "Could not update front page visibility."
+        );
+      }
+    };
+
+
   const handleToggleLike =
     async (
       post: Post,
@@ -1891,6 +2018,7 @@ function App() {
             ) =>
               post.moderationStatus ===
                 "approved" &&
+              post.frontPageVisible &&
               post.frontPagePinned
           )
           .sort(
@@ -1922,6 +2050,7 @@ function App() {
               (
                 post
               ) =>
+                post.frontPageVisible &&
                 !post.frontPagePinned
             )
           : filteredPosts,
@@ -2280,7 +2409,8 @@ function App() {
             BLOG HIGHLIGHT
             ================================================== */}
 
-        {highlightedBlogPost && (
+        {highlightedBlogPost?.published &&
+          highlightedBlogPost.is_highlighted && (
           <section
             className={`home-blog-highlight highlight-${highlightedBlogPost.accent_style}`}
           >
@@ -2325,7 +2455,17 @@ function App() {
               </div>
             ) : (
               <div className="home-blog-highlight-mark">
-                BLOG
+                <BookOpen
+                  size={24}
+                />
+
+                <span>
+                  ROFFLE
+                </span>
+
+                <strong>
+                  THOTS
+                </strong>
               </div>
             )}
           </section>
@@ -2394,6 +2534,9 @@ function App() {
                     }
                     onToggleFrontPagePin={
                       handleToggleFrontPagePin
+                    }
+                    onToggleFrontPageVisibility={
+                      handleToggleFrontPageVisibility
                     }
                     isStaff={
                       accessRole ===
@@ -2826,6 +2969,9 @@ function App() {
                       }
                       onToggleFrontPagePin={
                         handleToggleFrontPagePin
+                      }
+                      onToggleFrontPageVisibility={
+                        handleToggleFrontPageVisibility
                       }
                       isStaff={
                         accessRole ===

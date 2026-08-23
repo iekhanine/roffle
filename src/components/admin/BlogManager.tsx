@@ -469,7 +469,7 @@ export default function BlogManager() {
                         : "Draft"}
 
                       {post.is_highlighted
-                        ? " · Highlighted"
+                        ? " · Homepage feature"
                         : ""}
                     </small>
                   </span>
@@ -733,7 +733,7 @@ export default function BlogManager() {
                 }
               />
 
-              Highlight on homepage
+              Show as top homepage feature
             </label>
           </div>
 

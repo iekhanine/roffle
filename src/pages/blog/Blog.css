@@ -554,3 +554,82 @@ div > span {
       24px 20px;
   }
 }
+
+
+/* ==========================================================
+   BLOG 005
+   UNIFORM BLOG CARD WIDTHS
+   The first Blog post no longer gets a wider lead layout.
+   Orange and blue cards now use the same dimensions.
+   ========================================================== */
+
+
+.blog-index-card.lead {
+  grid-column: auto;
+
+  grid-template-columns:
+    170px
+    minmax(
+      0,
+      1fr
+    );
+}
+
+
+.blog-index-card.lead
+.blog-index-copy h2 {
+  font-size: 20px;
+}
+
+
+/* Keep the colored media panel identical regardless of accent. */
+
+.blog-index-card
+.blog-index-placeholder,
+.blog-index-card.lead
+.blog-index-placeholder,
+.blog-index-card
+.blog-index-image,
+.blog-index-card.lead
+.blog-index-image {
+  width: 170px;
+
+  min-width: 170px;
+  max-width: 170px;
+}
+
+
+.blog-index-card
+.blog-index-image img,
+.blog-index-card.lead
+.blog-index-image img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+
+@media (
+  max-width: 760px
+) {
+  .blog-index-card,
+  .blog-index-card.lead {
+    grid-template-columns:
+      1fr;
+  }
+
+  .blog-index-card
+  .blog-index-placeholder,
+  .blog-index-card.lead
+  .blog-index-placeholder,
+  .blog-index-card
+  .blog-index-image,
+  .blog-index-card.lead
+  .blog-index-image {
+    width: 100%;
+
+    min-width: 0;
+    max-width: none;
+  }
+}
